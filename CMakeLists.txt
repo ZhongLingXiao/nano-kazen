@@ -1,4 +1,91 @@
 cmake_minimum_required(VERSION 3.20)
 
-# set project name
+
+## Set project name ##
 project(kazen)
+
+
+## Find packages under rez-env ##
+find_package(Boost REQUIRED COMPONENTS filesystem system)
+find_package(TBB REQUIRED)
+find_package(OpenImageIO REQUIRED)
+find_package(embree 3.13.0 REQUIRED) # Here should point a spesific version
+find_package(fmt 7.1.3 REQUIRED)
+find_package(pugixml 1.11 REQUIRED)
+
+
+## Set platform-specific flags ##
+if (WIN32)
+  add_definitions(-D__WINDOWS__)
+elseif(UNIX)
+  if(APPLE)
+    add_definitions(-D__OSX__)
+  else()
+    add_definitions(-D__LINUX__)
+  endif()
+endif()
+
+
+## C++17 ##
+include(CheckCXXCompilerFlag)
+if (CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang|Emscripten|Intel)$")
+  CHECK_CXX_COMPILER_FLAG("-std=c++17" HAS_CPP17_FLAG)
+
+  if (HAS_CPP17_FLAG)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+  else()
+    CHECK_CXX_COMPILER_FLAG("-std=c++1z" HAS_CPP1Z_FLAG)
+    if (HAS_CPP1Z_FLAG)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
+    else()
+      message(FATAL_ERROR "Unsupported compiler -- nanogui requires C++17 support!")
+    endif()
+  endif()
+elseif(MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
+endif()
+
+
+## Add executable ##
+add_executable(kazen 
+    # headers
+    include/kazen/common.h
+    include/kazen/define.h
+
+    # source code
+    src/kazen/common.cpp
+
+    # main.cpp
+    src/kazen/main.cpp
+)
+
+
+## Header only ext ##
+target_include_directories(kazen PUBLIC
+    ## kazen include files ##
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    
+    ## eigen3 ##
+    $ENV{REZ_EIGEN_ROOT}
+    
+    ## tinyobjloader ##
+    $ENV{REZ_TINYOBJLOADER_ROOT}    
+
+    ## tbb ##
+    $ENV{REZ_TBB_ROOT}/include
+)
+
+
+## Link against target ##
+target_link_libraries(kazen PUBLIC
+    # Boost::filesystem
+    TBB::tbb
+    OpenImageIO::OpenImageIO
+    embree
+    fmt::fmt
+    pugixml::pugixml
+)
+
+
+## Compile features ##
+target_compile_features(kazen PUBLIC cxx_std_17)

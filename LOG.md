@@ -46,5 +46,22 @@ find_package(OpenImageIO REQUIRED)
 # find_package(embree 3.13.0 REQUIRED) # Here should point a spesific version
 find_package(fmt 7.1.3 REQUIRED)
 find_package(pugixml 1.11 REQUIRED)
+
 ```
+
+------
+
+`2021.11.12`**rez-packages完善**
+
+```c++
+// ++ tinyobjloader
+// ++ eigen3
+// pcg32库中没有cmake文件，不过这个只是一个头文件，可以直接放到我们的源码中
+
+// 明天计划：进行全部的库编译测试，保证库文件可以正确编译链接进kazen
+```
+
+
+
+------
 
