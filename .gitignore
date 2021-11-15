@@ -34,3 +34,7 @@
 # Build folder
 /build
 /Build
+
+# vscode
+.vscode/*
+.history/ # Local History for Visual Studio Code

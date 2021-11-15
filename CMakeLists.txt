@@ -49,8 +49,17 @@ endif()
 ## Add executable ##
 add_executable(kazen 
     # headers
+    include/kazen/bbox.h
+    include/kazen/color.h
     include/kazen/common.h
     include/kazen/define.h
+    include/kazen/dpdf.h
+    include/kazen/frame.h
+    include/kazen/pcg32.h
+    include/kazen/ray.h
+    include/kazen/timer.h
+    include/kazen/transform.h
+    include/kazen/vector.h
 
     # source code
     src/kazen/common.cpp

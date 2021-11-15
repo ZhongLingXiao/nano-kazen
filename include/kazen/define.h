@@ -4,7 +4,7 @@
 #define KAZEN_VERSION_MINOR 1
 #define KAZEN_VERSION_PATCH 0
 
-#define KAZEN_AUTHORS "ZhongLingXiao"
+#define KAZEN_AUTHORS "ZhongLingXiao && Joey Chen"
 #define KAZEN_YEAR 2021
 
 /// defines

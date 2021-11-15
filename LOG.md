@@ -19,6 +19,8 @@
 
 ------
 
+
+
 `2021.11.10`**文件目录结构创建**
 
 ```cpp
@@ -51,6 +53,8 @@ find_package(pugixml 1.11 REQUIRED)
 
 ------
 
+
+
 `2021.11.12`**rez-packages完善**
 
 ```c++
@@ -61,7 +65,17 @@ find_package(pugixml 1.11 REQUIRED)
 // 明天计划：进行全部的库编译测试，保证库文件可以正确编译链接进kazen
 ```
 
-
-
 ------
+
+
+
+`2021.11.15`**基础框架代码添加**
+
+```cpp
+// 数学类代码添加
+// - ray, frame, transform, color ...
+// - 添加了wj的pcg32实现
+// common.h类的完善
+
+```
 
