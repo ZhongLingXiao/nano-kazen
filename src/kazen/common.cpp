@@ -1,5 +1,9 @@
 #include <kazen/common.h>
 
+#include <kazen/color.h>
+#include <kazen/transform.h>
+#include <Eigen/Geometry>
+#include <Eigen/LU>
 #include <iomanip>
 
 #if defined(__LINUX__)
