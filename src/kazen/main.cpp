@@ -1,5 +1,5 @@
 #include <kazen/common.h>
-
+#include <kazen/bitmap.h>
 
 using namespace kazen;
 
@@ -18,15 +18,21 @@ RTC_NAMESPACE_USE
 
 int main(int argc, char* argv[])
 {
-  /* for best performance set FTZ and DAZ flags in MXCSR control and status register */
-  _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-  _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+    auto image = Bitmap(Vector2i(640, 480));
+    const std::string file = "out";
+    image.savePNG(file);
 
-  /* create new Embree device */
-  RTCDevice device = rtcNewDevice("verbose=1");
+    // -------------------------------------------------------------------------------------
+    // embree3
+    // /* for best performance set FTZ and DAZ flags in MXCSR control and status register */
+    // _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+    // _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
 
-  /* ddelete device again */
-  rtcReleaseDevice(device);
+    // /* create new Embree device */
+    // RTCDevice device = rtcNewDevice("verbose=1");
+
+    // /* ddelete device again */
+    // rtcReleaseDevice(device);
   
-  return 0;
+    return 0;
 }

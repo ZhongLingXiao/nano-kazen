@@ -10,7 +10,7 @@ find_package(Boost REQUIRED COMPONENTS filesystem system)
 find_package(TBB REQUIRED)
 find_package(OpenImageIO REQUIRED)
 find_package(embree 3.13.0 REQUIRED) # Here should point a spesific version
-find_package(fmt 7.1.3 REQUIRED)
+find_package(fmt 7.1.3 REQUIRED) # Here fmt should match oiio's fmt version
 find_package(pugixml 1.11 REQUIRED)
 
 
@@ -50,6 +50,7 @@ endif()
 add_executable(kazen 
     # headers
     include/kazen/bbox.h
+    include/kazen/bitmap.h
     include/kazen/color.h
     include/kazen/common.h
     include/kazen/define.h
@@ -62,6 +63,7 @@ add_executable(kazen
     include/kazen/vector.h
 
     # source code
+    src/kazen/bitmap.cpp
     src/kazen/common.cpp
 
     # main.cpp
