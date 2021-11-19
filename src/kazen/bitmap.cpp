@@ -11,33 +11,44 @@ Bitmap::Bitmap(const std::string &filename) {
 void Bitmap::saveEXR(const std::string &filename) {
 
     const std::string& path = filename + ".exr";
-    fmt::print("[{}x{}] Save openexr file to : {} ", cols(), rows(), path);
+    fmt::print("[{}x{}] Save openexr file to : {}\n", cols(), rows(), path);
 
     const int channels = 3;  // RGB
-    float pixels[cols()*rows()*channels];
     std::unique_ptr<OIIO::ImageOutput> out = OIIO::ImageOutput::create(path);
     if (! out)
         return;
     OIIO::ImageSpec spec(cols(), rows(), channels, OIIO::TypeDesc::FLOAT);
     out->open(path, spec);
-    out->write_image(OIIO::TypeDesc::FLOAT, pixels);
+    out->write_image(OIIO::TypeDesc::FLOAT, data());
     out->close();
 }
 
 void Bitmap::savePNG(const std::string &filename) {
     
     const std::string& path = filename + ".png";
-    fmt::print("[{}x{}] Save png file to : {} ", cols(), rows(), path);
+    fmt::print("[{}x{}] Save png file to : {}\n", cols(), rows(), path);
 
     const int channels = 3;  // RGB
-    unsigned char pixels[cols()*rows()*channels];
+    uint8_t *rgb8 = new uint8_t[channels * cols() * rows()];
+    uint8_t *dst = rgb8;
+    for (int i = 0; i < rows(); ++i) {
+        for (int j = 0; j < cols(); ++j) {
+            Color3f tonemapped = coeffRef(i, j).toSRGB();
+            dst[0] = (uint8_t) math::clamp(255.f * tonemapped[0], 0.f, 255.f);
+            dst[1] = (uint8_t) math::clamp(255.f * tonemapped[1], 0.f, 255.f);
+            dst[2] = (uint8_t) math::clamp(255.f * tonemapped[2], 0.f, 255.f);
+            dst += 3;
+        }
+    }
+
     std::unique_ptr<OIIO::ImageOutput> out = OIIO::ImageOutput::create(path);
     if (! out)
         return;
     OIIO::ImageSpec spec(cols(), rows(), channels, OIIO::TypeDesc::UINT8);
     out->open(path, spec);
-    out->write_image(OIIO::TypeDesc::UINT8, pixels);
+    out->write_image(OIIO::TypeDesc::UINT8, rgb8);
     out->close();
+    delete[] rgb8;
 }
 
 NAMESPACE_END(kazen)
