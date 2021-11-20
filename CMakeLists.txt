@@ -49,22 +49,53 @@ endif()
 ## Add executable ##
 add_executable(kazen 
     # headers
+    include/kazen/accel.h
     include/kazen/bbox.h
     include/kazen/bitmap.h
+    include/kazen/block.h
+    include/kazen/bsdf.h
+    include/kazen/camera.h
     include/kazen/color.h
     include/kazen/common.h
     include/kazen/define.h
     include/kazen/dpdf.h
     include/kazen/frame.h
+    include/kazen/integrator.h
+    include/kazen/light.h
+    include/kazen/mesh.h
+    include/kazen/object.h
+    include/kazen/parser.h
     include/kazen/pcg32.h
+    include/kazen/proplist.h
     include/kazen/ray.h
+    include/kazen/renderer.h
+    include/kazen/rfilter.h
+    include/kazen/sampler.h
+    include/kazen/scene.h
     include/kazen/timer.h
     include/kazen/transform.h
     include/kazen/vector.h
+    include/kazen/warp.h
 
     # source code
+    src/kazen/accel.cpp
     src/kazen/bitmap.cpp
+    src/kazen/block.cpp
+    src/kazen/bsdf.cpp
+    src/kazen/camera.cpp
     src/kazen/common.cpp
+    src/kazen/light.cpp
+    src/kazen/object.cpp
+    src/kazen/parser.cpp
+    src/kazen/proplist.cpp
+    src/kazen/rfilter.cpp
+    src/kazen/sampler.cpp
+    src/kazen/scene.cpp
+    src/kazen/warp.cpp
+
+    # experimental code
+
+    # tests
 
     # main.cpp
     src/kazen/main.cpp
