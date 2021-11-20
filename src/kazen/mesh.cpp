@@ -1,3 +1,4 @@
+#include <kazen/common.h>
 #include <kazen/mesh.h>
 #include <kazen/bbox.h>
 #include <kazen/bsdf.h>
@@ -5,7 +6,6 @@
 #include <kazen/warp.h>
 #include <kazen/timer.h>
 #include <Eigen/Geometry>
-#include <filesystem/resolver.h>
 #include <unordered_map>
 #include <fstream>
 
@@ -156,8 +156,7 @@ public:
     WavefrontOBJ(const PropertyList &propList) {
         typedef std::unordered_map<OBJVertex, uint32_t, OBJVertexHash> VertexMap;
 
-        filesystem::path filename =
-            getFileResolver()->resolve(propList.getString("filename"));
+        filesystem::path filename = SCENE_PARENT_PATH / propList.getString("filename")
 
         std::ifstream is(filename.str());
         if (is.fail())

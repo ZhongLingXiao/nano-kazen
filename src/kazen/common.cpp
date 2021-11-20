@@ -27,7 +27,83 @@
 NAMESPACE_BEGIN(kazen)
 
 NAMESPACE_BEGIN(util)
-    // timeString
+
+    /// core count
+    static int __cached_core_count = 0;
+    int getCoreCount() {
+        // assumes atomic word size memory access
+        if (__cached_core_count)
+            return __cached_core_count;
+
+    #if defined(__WINDOWS__)
+        SYSTEM_INFO sys_info;
+        GetSystemInfo(&sys_info);
+        __cached_core_count = sys_info.dwNumberOfProcessors;
+        return sys_info.dwNumberOfProcessors;
+    #elif defined(__OSX__)
+        int nprocs;
+        size_t nprocsSize = sizeof(int);
+        if (sysctlbyname("hw.activecpu", &nprocs, &nprocsSize, NULL, 0))
+            Throw("Could not detect the number of processors!");
+        __cached_core_count = nprocs;
+        return nprocs;
+    #else
+        /* Determine the number of present cores */
+        int nCores = sysconf(_SC_NPROCESSORS_CONF);
+
+        /* Don't try to query CPU affinity if running inside Valgrind */
+        if (getenv("VALGRIND_OPTS") == NULL) {
+            /* Some of the cores may not be available to the user
+            (e.g. on certain cluster nodes) -- determine the number
+            of actual available cores here. */
+            int nLogicalCores = nCores;
+            size_t size = 0;
+            cpu_set_t *cpuset = NULL;
+            int retval = 0;
+
+            /* The kernel may expect a larger cpu_set_t than would
+            be warranted by the physical core count. Keep querying
+            with increasingly larger buffers if the
+            pthread_getaffinity_np operation fails */
+            for (int i = 0; i<10; ++i) {
+                size = CPU_ALLOC_SIZE(nLogicalCores);
+                cpuset = CPU_ALLOC(nLogicalCores);
+                if (!cpuset) {
+                    // Throw("getCoreCount(): could not allocate cpu_set_t");
+                    
+                    goto done;
+                }
+                CPU_ZERO_S(size, cpuset);
+
+                int retval = pthread_getaffinity_np(pthread_self(), size, cpuset);
+                if (retval == 0)
+                    break;
+                CPU_FREE(cpuset);
+                nLogicalCores *= 2;
+            }
+
+            if (retval) {
+                // Throw("getCoreCount(): pthread_getaffinity_np(): could "
+                //     "not read thread affinity map: %s", strerror(retval));
+                goto done;
+            }
+
+            int availableCores = 0;
+            for (int i=0; i<nLogicalCores; ++i)
+                availableCores += CPU_ISSET_S(i, size, cpuset) ? 1 : 0;
+            nCores = availableCores;
+            CPU_FREE(cpuset);
+        }
+
+    done:
+        __cached_core_count = nCores;
+        return nCores;
+    #endif
+    }    
+
+
+
+    /// timeString
     std::string timeString(double time, bool precise)
     {
         if (std::isnan(time) || std::isinf(time))
@@ -54,7 +130,7 @@ NAMESPACE_BEGIN(util)
         return os.str();
     }
 
-    // terminalWidth
+    /// terminalWidth
     int terminalWidth() {
         static int cachedWidth = -1;
 
@@ -78,7 +154,7 @@ NAMESPACE_BEGIN(util)
         return cachedWidth;
     }
 
-    // memString
+    /// memString
     std::string memString(size_t size, bool precise) {
         const char *orders[] = { "B", "KB", "MB", "GB", "TB", "PB", "EB"};
         float value = (float) size;

@@ -7,7 +7,7 @@
 #include <iostream>
 #include <algorithm>
 #include <stdint.h>
-
+#include <filesystem>
 // 3rd
 #include <fmt/core.h>
 #include <Eigen/Core>
@@ -118,6 +118,8 @@ public:
 
 /// util
 NAMESPACE_BEGIN(util)
+    /// Return the number of cores (real and virtual)
+    extern int getCoreCount();
 
     /// Determine the width of the terminal window that is used to run kazen
     extern int terminalWidth();
@@ -242,7 +244,7 @@ extern Point2f sphericalCoordinates(const Vector3f &dir);
  */
 extern float fresnel(float cosThetaI, float extIOR, float intIOR);
 
-
+static filesystem::path SCENE_PARENT_PATH; 
 
 NAMESPACE_END(kazen)
 

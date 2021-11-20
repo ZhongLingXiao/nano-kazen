@@ -1,38 +1,52 @@
 #include <kazen/common.h>
-#include <kazen/bitmap.h>
+#include <kazen/renderer.h>
 
 using namespace kazen;
 
-#include <embree3/rtcore.h>
-RTC_NAMESPACE_USE
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        cerr << "Syntax: " << argv[0] << " <scene.xml>" <<  endl;
+        return -1;
+    }
 
-#include <xmmintrin.h>
-//#include <pmmintrin.h> // use this to get _MM_SET_DENORMALS_ZERO_MODE when compiling for SSE3 or higher
+    /* Parsing scene file path */
+    std::string sceneName = "";
+    for (int i = 1; i < argc; ++i) {
+        filesystem::path path(argv[i]);
 
-#if !defined(_MM_SET_DENORMALS_ZERO_MODE)
-#define _MM_DENORMALS_ZERO_ON   (0x0040)
-#define _MM_DENORMALS_ZERO_OFF  (0x0000)
-#define _MM_DENORMALS_ZERO_MASK (0x0040)
-#define _MM_SET_DENORMALS_ZERO_MODE(x) (_mm_setcsr((_mm_getcsr() & ~_MM_DENORMALS_ZERO_MASK) | (x)))
-#endif
+        try {
+            if (path.extension() == "xml") {
+                sceneName = argv[i];
 
-int main(int argc, char* argv[])
-{
-    auto image = Bitmap(Vector2i(640, 480));
-    const std::string file = "out";
-    image.savePNG(file);
+                /* Add the parent directory of the scene file to the
+                   file resolver. That way, the XML file can reference
+                   resources (OBJ files, textures) using relative paths */ 
+                SCENE_PARENT_PATH = path.parent_path();
+            } else {
+                cerr << "Fatal error: unknown file \"" << argv[i]
+                     << "\", expected an extension of type .xml or .exr" << endl;
+            }
+        } catch (const std::exception &e) {
+            cerr << "Fatal error: " << e.what() << endl;
+            return -1;
+        }
+    }
 
-    // -------------------------------------------------------------------------------------
-    // embree3
-    // /* for best performance set FTZ and DAZ flags in MXCSR control and status register */
-    // _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-    // _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+    /* Start rendering scene */
+    if (sceneName =="") {
+        cerr << "Please provide the path to a .xml (scene) file." << endl;
+        return -1;
+    } else {
+        try {
+            std::unique_ptr<NoriObject> root(loadFromXML(sceneName));
+            /* When the XML root object is a scene, start rendering it .. */
+            if (root->getClassType() == NoriObject::EScene)
+                renderer::render(static_cast<Scene *>(root.get()), sceneName);
+        } catch (const std::exception &e) {
+            cerr << e.what() << endl;
+            return -1;
+        }
+    }
 
-    // /* create new Embree device */
-    // RTCDevice device = rtcNewDevice("verbose=1");
-
-    // /* ddelete device again */
-    // rtcReleaseDevice(device);
-  
     return 0;
 }

@@ -66,6 +66,7 @@ add_executable(kazen
     include/kazen/object.h
     include/kazen/parser.h
     include/kazen/pcg32.h
+    include/kazen/progress.h
     include/kazen/proplist.h
     include/kazen/ray.h
     include/kazen/renderer.h
@@ -85,9 +86,12 @@ add_executable(kazen
     src/kazen/camera.cpp
     src/kazen/common.cpp
     src/kazen/light.cpp
+    src/kazen/mesh.cpp
     src/kazen/object.cpp
     src/kazen/parser.cpp
+    src/kazen/progress.cpp
     src/kazen/proplist.cpp
+    src/kazen/renderer.cpp
     src/kazen/rfilter.cpp
     src/kazen/sampler.cpp
     src/kazen/scene.cpp
