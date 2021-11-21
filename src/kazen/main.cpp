@@ -12,6 +12,9 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    /* copyRight */
+    std::cout << util::copyright() << '\n';
+
     /* Parsing scene file path */
     std::string sceneName = "";
     for (int i = 1; i < argc; ++i) {
@@ -35,6 +38,8 @@ int main(int argc, char **argv) {
     }
 
     /* Start rendering scene */
+    LOG("Rendering scene \"{}\"", sceneName);
+    LOG("================");
     if (sceneName =="") {
         cerr << "Please provide the path to a .xml (scene) file." << endl;
         return -1;
@@ -43,7 +48,7 @@ int main(int argc, char **argv) {
             std::unique_ptr<Object> root(loadFromXML(sceneName));
             /* When the XML root object is a scene, start rendering it .. */
             if (root->getClassType() == Object::EScene)
-                std::cout << root->toString() << std::endl;
+                // std::cout << root->toString() << std::endl;
                 renderer::render(static_cast<Scene *>(root.get()), sceneName);
         } catch (const std::exception &e) {
             cerr << e.what() << endl;

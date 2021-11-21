@@ -11,7 +11,7 @@ Bitmap::Bitmap(const std::string &filename) {
 void Bitmap::saveEXR(const std::string &filename) {
 
     const std::string& path = filename + ".exr";
-    fmt::print("[{}x{}] Save openexr file to : {}\n", cols(), rows(), path);
+    LOG("Save file to ==> {}. Resolution: [{}x{}]", path, cols(), rows());
 
     const int channels = 3;  // RGB
     std::unique_ptr<OIIO::ImageOutput> out = OIIO::ImageOutput::create(path);
@@ -26,7 +26,7 @@ void Bitmap::saveEXR(const std::string &filename) {
 void Bitmap::savePNG(const std::string &filename) {
     
     const std::string& path = filename + ".png";
-    fmt::print("[{}x{}] Save png file to : {}\n", cols(), rows(), path);
+    LOG("Save file to ==> {}. Resolution: [{}x{}]", path, cols(), rows());
 
     const int channels = 3;  // RGB
     uint8_t *rgb8 = new uint8_t[channels * cols() * rows()];

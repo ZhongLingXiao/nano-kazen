@@ -55,7 +55,7 @@ void renderBlock(const Scene *scene, Sampler *sampler, ImageBlock &block) {
 }
 
 
-void render(Scene *scene, const std::string &filename) {
+void render(Scene *scene, const std::string &filename) {    
     const Camera *camera = scene->getCamera();
     Vector2i outputSize = camera->getOutputSize();
     scene->getIntegrator()->preprocess(scene);
@@ -71,7 +71,6 @@ void render(Scene *scene, const std::string &filename) {
     std::thread render_thread([&] {
         auto progress = Progress("Rendering...");
         std::mutex mutex;
-        cout.flush();
         Timer timer;
 
         /* Total number of blocks to be handled, including multiple passes. */
@@ -116,7 +115,7 @@ void render(Scene *scene, const std::string &filename) {
         /// (equivalent to the following single-threaded call)
         // map(range);
 
-        cout << "done. (took " << timer.elapsedString() << ")" << endl;
+        LOG("Done. (took {})", timer.elapsedString());
     });
 
     /* Shut down the user interface */

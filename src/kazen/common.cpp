@@ -1,5 +1,6 @@
+#include <stdio.h>
+#include <time.h>
 #include <kazen/common.h>
-
 #include <kazen/color.h>
 #include <kazen/transform.h>
 #include <Eigen/Geometry>
@@ -171,11 +172,11 @@ NAMESPACE_BEGIN(util)
     std::string copyright() {
         return fmt::format(
             "\n"
-            "=======================================================\n"
-            " nano-kazen: Physically Based Renderer                 \n"
-            " Version Alpha {}.{}.{}a                               \n"
-            " Copyright (C) {} {}. All rights reserved.             \n"
-            "=======================================================\n",
+            "====================================================================\n"
+            " nano-kazen: Physically Based Renderer                              \n"
+            " Version Alpha {}.{}.{}a                                            \n"
+            " Copyright (C) {} {}. All rights reserved.                          \n"
+            "====================================================================\n",
             KAZEN_VERSION_MAJOR,
             KAZEN_VERSION_MINOR,
             KAZEN_VERSION_PATCH,
@@ -183,6 +184,20 @@ NAMESPACE_BEGIN(util)
             KAZEN_AUTHORS
         );
     }
+
+    /// dataTime
+    std::string currentTime() {
+        time_t     now = time(0);
+        struct tm  tstruct;
+        char       buf[80];
+        tstruct = *localtime(&now);
+        // Visit http://en.cppreference.com/w/cpp/chrono/c/strftime
+        // for more information about date/time format
+        strftime(buf, sizeof(buf), "%X", &tstruct);
+
+        return buf;
+    }    
+
 NAMESPACE_END(util)
 
 

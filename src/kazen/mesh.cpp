@@ -164,7 +164,8 @@ public:
             throw Exception("Unable to open OBJ file \"{}\"!", filename.str());
         Transform trafo = propList.getTransform("toWorld", Transform());
 
-        cout << "Loading \"" << filename << "\" ==> ";
+        // cout << "Loading \"" << filename << "\" ==> ";
+        LOG("Loading \"{}\" ... ", filename.str());
         cout.flush();
         Timer timer;
 
@@ -248,11 +249,11 @@ public:
         }
 
         m_name = filename.str();
-        cout << "done. (V=" << m_V.cols() << ", F=" << m_F.cols() << ", took "
-             << timer.elapsedString() << " and "
-             << util::memString(m_F.size() * sizeof(uint32_t) +
-                          sizeof(float) * (m_V.size() + m_N.size() + m_UV.size()))
-             << ")" << endl;
+        // cout << "done. (V=" << m_V.cols() << ", F=" << m_F.cols() << ", took "
+        //      << timer.elapsedString() << " and "
+        //      << util::memString(m_F.size() * sizeof(uint32_t) +
+        //                   sizeof(float) * (m_V.size() + m_N.size() + m_UV.size()))
+        //      << ")" << endl;
     }
 
 protected:

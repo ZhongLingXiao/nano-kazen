@@ -37,9 +37,9 @@ void Scene::activate() {
         m_sampler = static_cast<Sampler*>(ObjectFactory::createInstance("independent", PropertyList()));
     }
 
-    cout << endl;
-    cout << "Configuration: " << toString() << endl;
-    cout << endl;
+    // cout << endl;
+    // cout << "Configuration: " << toString() << endl;
+    // cout << endl;
 }
 
 void Scene::addChild(Object *obj) {

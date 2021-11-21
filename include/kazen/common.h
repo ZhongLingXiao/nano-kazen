@@ -137,6 +137,9 @@ NAMESPACE_BEGIN(util)
     /// Convert a memory amount in bytes into a human-readable string
     extern std::string memString(size_t size, bool precise = false);
 
+    /// Convert a current time <HH:mm:ss> into a human-readable string
+    extern std::string currentTime();
+
 NAMESPACE_END(util)
 
 
@@ -255,6 +258,12 @@ extern float fresnel(float cosThetaI, float extIOR, float intIOR);
  * texture files) referenced by a scene being loaded
  */
 extern filesystem::resolver *getFileResolver();
+
+template <typename... Args>
+extern void LOG(const char *fmt, const Args &... args) {
+    // fmt::print("{}[INFO]: {}", util::currentTime(), fmt::format(fmt, args...));
+    std::cout << "[" << util::currentTime() << "][INFO]: " << fmt::format(fmt, args...) << std::endl;
+}
 
 NAMESPACE_END(kazen)
 
