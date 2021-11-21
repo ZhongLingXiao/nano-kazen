@@ -79,3 +79,15 @@ find_package(pugixml 1.11 REQUIRED)
 
 ```
 
+------
+
+
+
+`2021.11.21`**完成第一张图片渲染-milestone-0.0.1**
+
+```cpp
+// 创建最基本的integrator
+// 绘制第一张png和exr文件
+// 
+
+```

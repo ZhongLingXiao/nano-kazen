@@ -3,6 +3,7 @@
 #include <kazen/color.h>
 #include <kazen/transform.h>
 #include <Eigen/Geometry>
+#include <filesystem/resolver.h>    
 #include <Eigen/LU>
 #include <iomanip>
 
@@ -225,14 +226,14 @@ NAMESPACE_BEGIN(string)
         else if (value == "true")
             return true;
         else
-            throw Exception("Could not parse boolean value \"%s\"", str);
+            throw Exception("Could not parse boolean value \"{}\"", str);
     }
 
     int toInt(const std::string &str) {
         char *end_ptr = nullptr;
         int result = (int) strtol(str.c_str(), &end_ptr, 10);
         if (*end_ptr != '\0')
-            throw Exception("Could not parse integer value \"%s\"", str);
+            throw Exception("Could not parse integer value \"{}\"", str);
         return result;
     }
 
@@ -240,7 +241,7 @@ NAMESPACE_BEGIN(string)
         char *end_ptr = nullptr;
         unsigned int result = (int) strtoul(str.c_str(), &end_ptr, 10);
         if (*end_ptr != '\0')
-            throw Exception("Could not parse integer value \"%s\"", str);
+            throw Exception("Could not parse integer value \"{}\"", str);
         return result;
     }
 
@@ -407,6 +408,11 @@ float fresnel(float cosThetaI, float extIOR, float intIOR) {
              / (etaT * cosThetaI + etaI * cosThetaT);
 
     return (Rs * Rs + Rp * Rp) / 2.0f;
+}
+
+filesystem::resolver *getFileResolver() {
+    static filesystem::resolver *resolver = new filesystem::resolver();
+    return resolver;
 }
 
 NAMESPACE_END(kazen)

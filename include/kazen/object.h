@@ -122,7 +122,7 @@ public:
     static Object *createInstance(const std::string &name,
             const PropertyList &propList) {
         if (!m_constructors || m_constructors->find(name) == m_constructors->end())
-            throw Exception("A constructor for class \"%s\" could not be found!", name);
+            throw Exception("A constructor for class \"{}\" could not be found!", name);
         return (*m_constructors)[name](propList);
     }
 private:

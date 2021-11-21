@@ -95,7 +95,7 @@ protected:
     float *m_weightsX = nullptr;
     float *m_weightsY = nullptr;
     float m_lookupFactor = 0;
-    mutable tbb::mutex m_mutex;
+    mutable tbb::spin_mutex m_mutex;
 };
 
 /**

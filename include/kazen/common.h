@@ -7,7 +7,6 @@
 #include <iostream>
 #include <algorithm>
 #include <stdint.h>
-#include <filesystem>
 // 3rd
 #include <fmt/core.h>
 #include <Eigen/Core>
@@ -29,6 +28,11 @@
 #define SQRT_TWO     1.41421356237309504880f
 #define INV_SQRT_TWO 0.70710678118654752440f
 
+/* Forward declarations */
+namespace filesystem {
+    class path;
+    class resolver;
+};
 
 NAMESPACE_BEGIN(kazen)
 
@@ -244,7 +248,13 @@ extern Point2f sphericalCoordinates(const Vector3f &dir);
  */
 extern float fresnel(float cosThetaI, float extIOR, float intIOR);
 
-static filesystem::path SCENE_PARENT_PATH; 
+/**
+ * \brief Return the global file resolver instance
+ *
+ * This class is used to locate resource files (e.g. mesh or
+ * texture files) referenced by a scene being loaded
+ */
+extern filesystem::resolver *getFileResolver();
 
 NAMESPACE_END(kazen)
 

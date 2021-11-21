@@ -77,7 +77,7 @@ void Scene::addChild(Object *obj) {
             break;
 
         default:
-            throw Exception("Scene::addChild(<%s>) is not supported!",
+            throw Exception("Scene::addChild(<{}>) is not supported!",
                 classTypeName(obj->getClassType()));
     }
 }

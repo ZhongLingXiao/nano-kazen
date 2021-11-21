@@ -10,7 +10,7 @@
 #include <kazen/integrator.h>
 #include <tbb/parallel_for.h>
 #include <tbb/blocked_range.h>
-#include <tbb/task_scheduler_init.h>
+#include <tbb/global_control.h>
 #include <thread>
 
 
@@ -18,7 +18,8 @@ NAMESPACE_BEGIN(kazen)
 NAMESPACE_BEGIN(renderer)
 
 void renderSample(const Scene *scene, Sampler *sampler, ImageBlock &block, const Point2f &pixelSample) {
-
+    const Integrator *integrator = scene->getIntegrator();
+    const Camera *camera = scene->getCamera();
     /* Get random 2d */
     Point2f apertureSample = sampler->next2D();
 
@@ -35,9 +36,6 @@ void renderSample(const Scene *scene, Sampler *sampler, ImageBlock &block, const
 
 
 void renderBlock(const Scene *scene, Sampler *sampler, ImageBlock &block) {
-    const Camera *camera = scene->getCamera();
-    const Integrator *integrator = scene->getIntegrator();
-
     Point2i offset = block.getOffset();
     Vector2i size  = block.getSize();
 
@@ -50,7 +48,7 @@ void renderBlock(const Scene *scene, Sampler *sampler, ImageBlock &block) {
             for (uint32_t i=0; i<sampler->getSampleCount(); ++i) {
                 Point2f pixelSample = Point2f((float) (x + offset.x()), (float) (y + offset.y())) + sampler->next2D();
                 /* Render all contained pixels */
-                renderSample(scene, sampler, block, pixelSample)
+                renderSample(scene, sampler, block, pixelSample);
             }
         }
     }
@@ -71,9 +69,8 @@ void render(Scene *scene, const std::string &filename) {
 
     /* Do the following in parallel and asynchronously */
     std::thread render_thread([&] {
-        tbb::task_scheduler_init init(tbb::task_scheduler_init::automatic); // util::getCoreCount()
-
-        cout << "Rendering .. ";
+        auto progress = Progress("Rendering...");
+        std::mutex mutex;
         cout.flush();
         Timer timer;
 

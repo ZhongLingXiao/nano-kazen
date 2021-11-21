@@ -2,7 +2,7 @@
 #include <kazen/bitmap.h>
 #include <kazen/rfilter.h>
 #include <kazen/bbox.h>
-#include <kazen/tbb.h>
+#include <tbb/tbb.h>
 
 NAMESPACE_BEGIN(kazen)
 

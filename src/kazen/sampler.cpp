@@ -1,6 +1,6 @@
 #include <kazen/sampler.h>
 #include <kazen/block.h>
-#include <pcg32.h>
+#include <kazen/pcg32.h>
 
 NAMESPACE_BEGIN(kazen)
 

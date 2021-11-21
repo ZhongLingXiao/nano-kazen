@@ -8,6 +8,29 @@
 NAMESPACE_BEGIN(kazen)
 
 Object *loadFromXML(const std::string &filename) {
+
+    // /// Remove this: temp test code
+    // pugi::xml_document doc;
+    // pugi::xml_parse_result result = doc.load_file(filename.c_str());
+
+    // if (!result)
+    //     std::cout << "shit happens\n";
+
+    // pugi::xml_node scene = doc.child("scene");
+    //  std::cout << scene.name() << std::endl;
+    // for (pugi::xml_node_iterator it = scene.begin(); it != scene.end(); ++it) {
+    //     auto str = fmt::format("{}", string::indent(it->name(), 4));
+    //     std::cout << str << std::endl;
+        
+    //     for (pugi::xml_attribute_iterator ait = it->attributes_begin(); ait != it->attributes_end(); ++ait) {
+    //         std::cout << " : " << ait->name() << "=" << ait->value();
+    //     }
+
+    //     std::cout << std::endl;
+    // }
+
+    // return nullptr;
+
     /* Load the XML file using 'pugi' (a tiny self-contained XML parser implemented in C++) */
     pugi::xml_document doc;
     pugi::xml_parse_result result = doc.load_file(filename.c_str());
@@ -22,7 +45,7 @@ Object *loadFromXML(const std::string &filename) {
             for (int i = 0; i < is.gcount(); ++i) {
                 if (buffer[i] == '\n') {
                     if (offset + i >= pos)
-                        return tfm::format("line %i, col %i", line + 1, pos - linestart);
+                        return fmt::format("line {}, col {}", line + 1, pos - linestart);
                     ++line;
                     linestart = offset + i;
                 }
@@ -33,7 +56,7 @@ Object *loadFromXML(const std::string &filename) {
     };
 
     if (!result) /* There was a parser / file IO error */
-        throw Exception("Error while parsing \"%s\": %s (at %s)", filename, result.description(), offset(result.offset));
+        throw Exception("Error while parsing \"{}\": {} (at {})", filename, result.description(), offset(result.offset));
 
     /* Set of supported XML tags */
     enum ETag {
@@ -72,7 +95,7 @@ Object *loadFromXML(const std::string &filename) {
     tags["scene"]       = EScene;
     tags["mesh"]        = EMesh;
     tags["bsdf"]        = EBSDF;
-    tags["light"]       = EEmitter;
+    tags["light"]       = ELight;
     tags["camera"]      = ECamera;
     tags["medium"]      = EMedium;
     tags["phase"]       = EPhaseFunction;
@@ -98,12 +121,12 @@ Object *loadFromXML(const std::string &filename) {
         for (auto attr : node.attributes()) {
             auto it = attrs.find(attr.name());
             if (it == attrs.end())
-                throw Exception("Error while parsing \"%s\": unexpected attribute \"%s\" in \"%s\" at %s",
+                throw Exception("Error while parsing \"{}\": unexpected attribute \"{}\" in \"{}\" at {}",
                                     filename, attr.name(), node.name(), offset(node.offset_debug()));
             attrs.erase(it);
         }
         if (!attrs.empty())
-            throw Exception("Error while parsing \"%s\": missing attribute \"%s\" in \"%s\" at %s",
+            throw Exception("Error while parsing \"{}\": missing attribute \"{}\" in \"{}\" at {}",
                                 filename, *attrs.begin(), node.name(), offset(node.offset_debug()));
     };
 
@@ -118,13 +141,13 @@ Object *loadFromXML(const std::string &filename) {
 
         if (node.type() != pugi::node_element)
             throw Exception(
-                "Error while parsing \"%s\": unexpected content at %s",
+                "Error while parsing \"{}\": unexpected content at {}",
                 filename, offset(node.offset_debug()));
 
         /* Look up the name of the current element */
         auto it = tags.find(node.name());
         if (it == tags.end())
-            throw Exception("Error while parsing \"%s\": unexpected tag \"%s\" at %s",
+            throw Exception("Error while parsing \"{}\": unexpected tag \"{}\" at {}",
                                 filename, node.name(), offset(node.offset_debug()));
         int tag = it->second;
 
@@ -136,16 +159,16 @@ Object *loadFromXML(const std::string &filename) {
         bool currentIsTransformOp = tag == ETranslate || tag == ERotate || tag == EScale || tag == ELookAt || tag == EMatrix;
 
         if (!hasParent && !currentIsObject)
-            throw Exception("Error while parsing \"%s\": root element \"%s\" must be a kazen object (at %s)",
+            throw Exception("Error while parsing \"{}\": root element \"{}\" must be a kazen object (at {})",
                                 filename, node.name(), offset(node.offset_debug()));
 
         if (parentIsTransform != currentIsTransformOp)
-            throw Exception("Error while parsing \"%s\": transform nodes "
-                                "can only contain transform operations (at %s)",
+            throw Exception("Error while parsing \"{}\": transform nodes "
+                                "can only contain transform operations (at {})",
                                 filename,  offset(node.offset_debug()));
 
         if (hasParent && !parentIsObject && !(parentIsTransform && currentIsTransformOp))
-            throw Exception("Error while parsing \"%s\": node \"%s\" requires a kazen object as parent (at %s)",
+            throw Exception("Error while parsing \"{}\": node \"{}\" requires a kazen object as parent (at {})",
                                 filename, node.name(), offset(node.offset_debug()));
 
         if (tag == EScene)
@@ -175,7 +198,7 @@ Object *loadFromXML(const std::string &filename) {
                 if (result->getClassType() != (int) tag) {
                     throw Exception(
                         "Unexpectedly constructed an object "
-                        "of type <%s> (expected type <%s>): %s",
+                        "of type <{}> (expected type <{}>): {}",
                         Object::classTypeName(result->getClassType()),
                         Object::classTypeName((Object::EClassType) tag),
                         result->toString());
@@ -199,32 +222,32 @@ Object *loadFromXML(const std::string &filename) {
                         break;
                     case EFloat: {
                             check_attributes(node, { "name", "value" });
-                            list.setFloat(node.attribute("name").value(), toFloat(node.attribute("value").value()));
+                            list.setFloat(node.attribute("name").value(), string::toFloat(node.attribute("value").value()));
                         }
                         break;
                     case EInteger: {
                             check_attributes(node, { "name", "value" });
-                            list.setInteger(node.attribute("name").value(), toInt(node.attribute("value").value()));
+                            list.setInteger(node.attribute("name").value(), string::toInt(node.attribute("value").value()));
                         }
                         break;
                     case EBoolean: {
                             check_attributes(node, { "name", "value" });
-                            list.setBoolean(node.attribute("name").value(), toBool(node.attribute("value").value()));
+                            list.setBoolean(node.attribute("name").value(), string::toBool(node.attribute("value").value()));
                         }
                         break;
                     case EPoint: {
                             check_attributes(node, { "name", "value" });
-                            list.setPoint(node.attribute("name").value(), Point3f(toVector3f(node.attribute("value").value())));
+                            list.setPoint(node.attribute("name").value(), Point3f(string::toVector3f(node.attribute("value").value())));
                         }
                         break;
                     case EVector: {
                             check_attributes(node, { "name", "value" });
-                            list.setVector(node.attribute("name").value(), Vector3f(toVector3f(node.attribute("value").value())));
+                            list.setVector(node.attribute("name").value(), Vector3f(string::toVector3f(node.attribute("value").value())));
                         }
                         break;
                     case EColor: {
                             check_attributes(node, { "name", "value" });
-                            list.setColor(node.attribute("name").value(), Color3f(toVector3f(node.attribute("value").value()).array()));
+                            list.setColor(node.attribute("name").value(), Color3f(string::toVector3f(node.attribute("value").value()).array()));
                         }
                         break;
                     case ETransform: {
@@ -234,40 +257,40 @@ Object *loadFromXML(const std::string &filename) {
                         break;
                     case ETranslate: {
                             check_attributes(node, { "value" });
-                            Eigen::Vector3f v = toVector3f(node.attribute("value").value());
+                            Eigen::Vector3f v = string::toVector3f(node.attribute("value").value());
                             transform = Eigen::Translation<float, 3>(v.x(), v.y(), v.z()) * transform;
                         }
                         break;
                     case EMatrix: {
                             check_attributes(node, { "value" });
-                            std::vector<std::string> tokens = tokenize(node.attribute("value").value());
+                            std::vector<std::string> tokens = string::tokenize(node.attribute("value").value());
                             if (tokens.size() != 16)
                                 throw Exception("Expected 16 values");
                             Eigen::Matrix4f matrix;
                             for (int i=0; i<4; ++i)
                                 for (int j=0; j<4; ++j)
-                                    matrix(i, j) = toFloat(tokens[i*4+j]);
+                                    matrix(i, j) = string::toFloat(tokens[i*4+j]);
                             transform = Eigen::Affine3f(matrix) * transform;
                         }
                         break;
                     case EScale: {
                             check_attributes(node, { "value" });
-                            Eigen::Vector3f v = toVector3f(node.attribute("value").value());
+                            Eigen::Vector3f v = string::toVector3f(node.attribute("value").value());
                             transform = Eigen::DiagonalMatrix<float, 3>(v) * transform;
                         }
                         break;
                     case ERotate: {
                             check_attributes(node, { "angle", "axis" });
-                            float angle = degToRad(toFloat(node.attribute("angle").value()));
-                            Eigen::Vector3f axis = toVector3f(node.attribute("axis").value());
+                            float angle = math::degToRad(string::toFloat(node.attribute("angle").value()));
+                            Eigen::Vector3f axis = string::toVector3f(node.attribute("axis").value());
                             transform = Eigen::AngleAxis<float>(angle, axis) * transform;
                         }
                         break;
                     case ELookAt: {
                             check_attributes(node, { "origin", "target", "up" });
-                            Eigen::Vector3f origin = toVector3f(node.attribute("origin").value());
-                            Eigen::Vector3f target = toVector3f(node.attribute("target").value());
-                            Eigen::Vector3f up = toVector3f(node.attribute("up").value());
+                            Eigen::Vector3f origin = string::toVector3f(node.attribute("origin").value());
+                            Eigen::Vector3f target = string::toVector3f(node.attribute("target").value());
+                            Eigen::Vector3f up = string::toVector3f(node.attribute("up").value());
 
                             Vector3f dir = (target - origin).normalized();
                             Vector3f left = up.normalized().cross(dir).normalized();
@@ -281,11 +304,11 @@ Object *loadFromXML(const std::string &filename) {
                         }
                         break;
 
-                    default: throw Exception("Unhandled element \"%s\"", node.name());
+                    default: throw Exception("Unhandled element \"{}\"", node.name());
                 };
             }
         } catch (const Exception &e) {
-            throw Exception("Error while parsing \"%s\": %s (at %s)", filename,
+            throw Exception("Error while parsing \"{}\": {} (at {})", filename,
                                 e.what(), offset(node.offset_debug()));
         }
 

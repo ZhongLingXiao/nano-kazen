@@ -27,6 +27,7 @@ endif()
 
 
 ## C++17 ##
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 include(CheckCXXCompilerFlag)
 if (CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang|Emscripten|Intel)$")
   CHECK_CXX_COMPILER_FLAG("-std=c++17" HAS_CPP17_FLAG)
@@ -85,6 +86,7 @@ add_executable(kazen
     src/kazen/bsdf.cpp
     src/kazen/camera.cpp
     src/kazen/common.cpp
+    src/kazen/integrator.cpp
     src/kazen/light.cpp
     src/kazen/mesh.cpp
     src/kazen/object.cpp
@@ -119,6 +121,10 @@ target_include_directories(kazen PUBLIC
 
     ## tbb ##
     $ENV{REZ_TBB_ROOT}/include
+
+    ## filesystem ##
+    $ENV{REZ_FILESYSTEM_ROOT}
+
 )
 
 

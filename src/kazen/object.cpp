@@ -4,7 +4,7 @@ NAMESPACE_BEGIN(kazen)
 
 void Object::addChild(Object *) {
     throw Exception(
-        "Object::addChild() is not implemented for objects of type '%s'!",
+        "Object::addChild() is not implemented for objects of type '{}'!",
         classTypeName(getClassType()));
 }
 

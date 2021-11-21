@@ -2,7 +2,7 @@
 
 #include <kazen/vector.h>
 
-NAMESPACE_BEGIN(kazenxs)
+NAMESPACE_BEGIN(kazen)
 
 /**
  * \brief Stores a three-dimensional orthonormal coordinate frame

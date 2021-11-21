@@ -6,6 +6,7 @@
 #include <kazen/warp.h>
 #include <kazen/timer.h>
 #include <Eigen/Geometry>
+#include <filesystem/resolver.h>
 #include <unordered_map>
 #include <fstream>
 
@@ -16,7 +17,7 @@ Mesh::Mesh() { }
 
 Mesh::~Mesh() {
     delete m_bsdf;
-    delete m_emitter;
+    delete m_light;
 }
 
 void Mesh::activate() {
@@ -104,7 +105,7 @@ void Mesh::addChild(Object *obj) {
             break;
 
         default:
-            throw Exception("Mesh::addChild(<%s>) is not supported!", classTypeName(obj->getClassType()));
+            throw Exception("Mesh::addChild(<{}>) is not supported!", classTypeName(obj->getClassType()));
     }
 }
 
@@ -115,13 +116,13 @@ std::string Mesh::toString() const {
         "  vertexCount = {},\n"
         "  triangleCount = {},\n"
         "  bsdf = {},\n"
-        "  emitter = {}\n"
+        "  light = {}\n"
         "]",
         m_name,
         m_V.cols(),
         m_F.cols(),
-        m_bsdf ? indent(m_bsdf->toString()) : std::string("null"),
-        m_emitter ? indent(m_emitter->toString()) : std::string("null")
+        m_bsdf ? string::indent(m_bsdf->toString()) : std::string("null"),
+        m_light ? string::indent(m_light->toString()) : std::string("null")
     );
 }
 
@@ -129,7 +130,7 @@ std::string Intersection::toString() const {
     if (!mesh)
         return "Intersection[invalid]";
 
-    return tfm::format(
+    return fmt::format(
         "Intersection[\n"
         "  p = {},\n"
         "  t = {},\n"
@@ -141,8 +142,8 @@ std::string Intersection::toString() const {
         p.toString(),
         t,
         uv.toString(),
-        indent(shFrame.toString()),
-        indent(geoFrame.toString()),
+        string::indent(shFrame.toString()),
+        string::indent(geoFrame.toString()),
         mesh ? mesh->toString() : std::string("null")
     );
 }
@@ -156,14 +157,14 @@ public:
     WavefrontOBJ(const PropertyList &propList) {
         typedef std::unordered_map<OBJVertex, uint32_t, OBJVertexHash> VertexMap;
 
-        filesystem::path filename = SCENE_PARENT_PATH / propList.getString("filename")
+        filesystem::path filename = getFileResolver()->resolve(propList.getString("filename"));
 
         std::ifstream is(filename.str());
         if (is.fail())
-            throw Exception("Unable to open OBJ file \"%s\"!", filename);
+            throw Exception("Unable to open OBJ file \"{}\"!", filename.str());
         Transform trafo = propList.getTransform("toWorld", Transform());
 
-        cout << "Loading \"" << filename << "\" .. ";
+        cout << "Loading \"" << filename << "\" ==> ";
         cout.flush();
         Timer timer;
 
@@ -249,7 +250,7 @@ public:
         m_name = filename.str();
         cout << "done. (V=" << m_V.cols() << ", F=" << m_F.cols() << ", took "
              << timer.elapsedString() << " and "
-             << memString(m_F.size() * sizeof(uint32_t) +
+             << util::memString(m_F.size() * sizeof(uint32_t) +
                           sizeof(float) * (m_V.size() + m_N.size() + m_UV.size()))
              << ")" << endl;
     }
@@ -264,18 +265,18 @@ protected:
         inline OBJVertex() { }
 
         inline OBJVertex(const std::string &string) {
-            std::vector<std::string> tokens = tokenize(string, "/", true);
+            std::vector<std::string> tokens = string::tokenize(string, "/", true);
 
             if (tokens.size() < 1 || tokens.size() > 3)
-                throw Exception("Invalid vertex data: \"%s\"", string);
+                throw Exception("Invalid vertex data: \"{}\"", string);
 
-            p = toUInt(tokens[0]);
+            p = string::toUInt(tokens[0]);
 
             if (tokens.size() >= 2 && !tokens[1].empty())
-                uv = toUInt(tokens[1]);
+                uv = string::toUInt(tokens[1]);
 
             if (tokens.size() >= 3 && !tokens[2].empty())
-                n = toUInt(tokens[2]);
+                n = string::toUInt(tokens[2]);
         }
 
         inline bool operator==(const OBJVertex &v) const {

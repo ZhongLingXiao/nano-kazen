@@ -150,7 +150,7 @@ protected:
     Mesh();
 
 protected:
-    std::string m_name;                     ///< Identifying name
+    std::string     m_name;                 ///< Identifying name
     MatrixXf        m_V;                    ///< Vertex positions
     MatrixXf        m_N;                    ///< Vertex normals
     MatrixXf        m_UV;                   ///< Vertex texture coordinates

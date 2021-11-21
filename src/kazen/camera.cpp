@@ -44,7 +44,7 @@ public:
          *  mapped to the interval [-1, 1].
          */
         float recip = 1.0f / (m_farClip - m_nearClip),
-              cot = 1.0f / std::tan(degToRad(m_fov / 2.0f));
+              cot = 1.0f / std::tan(math::degToRad(m_fov / 2.0f));
 
         Eigen::Matrix4f perspective;
         perspective <<
@@ -99,7 +99,7 @@ public:
                 break;
 
             default:
-                throw Exception("Camera::addChild(<%s>) is not supported!",
+                throw Exception("Camera::addChild(<{}>) is not supported!",
                     classTypeName(obj->getClassType()));
         }
     }
@@ -118,7 +118,7 @@ public:
             m_outputSize.toString(),
             m_fov,
             m_nearClip, m_farClip,
-            indent(m_rfilter->toString())
+            string::indent(m_rfilter->toString())
         );
     }
 private:

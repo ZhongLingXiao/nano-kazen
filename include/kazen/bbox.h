@@ -309,7 +309,7 @@ template <typename _PointType> struct TBoundingBox {
         if (!isValid())
             return "BoundingBox[invalid]";
         else
-            return tfm::format("BoundingBox[min=%s, max=%s]", min.toString(), max.toString());
+            return fmt::format("BoundingBox[min={}, max={}]", min.toString(), max.toString());
     }
 
     /// Check if a ray intersects a bounding box

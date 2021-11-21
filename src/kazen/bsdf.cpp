@@ -221,7 +221,7 @@ public:
     }
 
     std::string toString() const {
-        return tfm::format(
+        return fmt::format(
             "Microfacet[\n"
             "  alpha = {},\n"
             "  intIOR = {},\n"

@@ -14,9 +14,9 @@ NAMESPACE_BEGIN(kazen)
     Type PropertyList::get##TypeName(const std::string &name) const {                       \
         auto it = m_properties.find(name);                                                  \
         if (it == m_properties.end())                                                       \
-            throw Exception("Property '%s' is missing!", name);                             \
+            throw Exception("Property '{}' is missing!", name);                             \
         if (it->second.type != Property::XmlName##_type)                                    \
-            throw Exception("Property '%s' has the wrong type! "                            \
+            throw Exception("Property '{}' has the wrong type! "                            \
                 "(expected <" #XmlName ">)!", name);                                        \
         return it->second.value.XmlName##_value;                                            \
     }                                                                                       \
@@ -26,7 +26,7 @@ NAMESPACE_BEGIN(kazen)
         if (it == m_properties.end())                                                       \
             return defVal;                                                                  \
         if (it->second.type != Property::XmlName##_type)                                    \
-            throw Exception("Property '%s' has the wrong type! "                            \
+            throw Exception("Property '{}' has the wrong type! "                            \
                 "(expected <" #XmlName ">)!", name);                                        \
         return it->second.value.XmlName##_value;                                            \
     }
