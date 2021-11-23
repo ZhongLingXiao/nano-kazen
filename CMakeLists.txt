@@ -27,10 +27,13 @@ endif()
 
 
 ## C++17 ##
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall -Wextra")
 include(CheckCXXCompilerFlag)
 if (CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang|Emscripten|Intel)$")
   CHECK_CXX_COMPILER_FLAG("-std=c++17" HAS_CPP17_FLAG)
+
+  # set(CMAKE_CXX_FLAGS_DEBUG "-g")
+  # set(CMAKE_CXX_FLAGS_RELEASE "-O1") # O1 is fastest in this case
 
   if (HAS_CPP17_FLAG)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
@@ -39,7 +42,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang|Emscripten|Intel)$")
     if (HAS_CPP1Z_FLAG)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
     else()
-      message(FATAL_ERROR "Unsupported compiler -- nanogui requires C++17 support!")
+      message(FATAL_ERROR "Unsupported compiler -- kazen requires C++17 support!")
     endif()
   endif()
 elseif(MSVC)
