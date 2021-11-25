@@ -91,3 +91,34 @@ find_package(pugixml 1.11 REQUIRED)
 // 
 
 ```
+
+------
+
+
+
+`2021.11.25 - 2021.xx.xx`**调研osl和embree中的简单渲染器是如何集成这2个库的**
+
+```cpp
+// osl中的渲染器需要继承RendererServices这个类
+//
+// ShaderGlobals的解释: src/include/OSL/shaderglobals.h
+/// The ShaderGlobals structure represents the state describing a particular
+/// point to be shaded. It serves two primary purposes: (1) it holds the
+/// values of the "global" variables accessible from a shader (such as P, N,
+/// Ci, etc.); (2) it serves as a means of passing (via opaque pointers)
+/// additional state between the renderer when it invokes the shader, and
+/// the RendererServices that fields requests from OSL back to the renderer.
+///
+/// Except where noted, it is expected that all values are filled in by the
+/// renderer before passing it to ShadingSystem::execute() to actually run
+/// the shader. Not all fields will be valid in all contexts. In particular,
+/// a few are only needed for lights and volumes.
+///
+/// All points, vectors and normals are given in "common" space.
+///
+// ShaderGlobals里面的值是通过globals_from_hit方法设置的。
+// scene.intersect()方法得到RayHit信息，然后通过uv==>重心坐标==>Ns(Shading normal)
+// Ng可以通过RTCRayHit.ray中的信息拿到，其它的以此类推得到
+
+```
+
