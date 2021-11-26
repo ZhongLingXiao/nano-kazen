@@ -96,7 +96,7 @@ find_package(pugixml 1.11 REQUIRED)
 
 
 
-`2021.11.25 - 2021.xx.xx`**调研osl和embree中的简单渲染器是如何集成这2个库的**
+`2021.11.25 - 2021.11.26`**调研osl和embree中的简单渲染器是如何集成这2个库的**
 
 ```cpp
 // osl中的渲染器需要继承RendererServices这个类
@@ -115,10 +115,22 @@ find_package(pugixml 1.11 REQUIRED)
 /// a few are only needed for lights and volumes.
 ///
 /// All points, vectors and normals are given in "common" space.
-///
+
 // ShaderGlobals里面的值是通过globals_from_hit方法设置的。
 // scene.intersect()方法得到RayHit信息，然后通过uv==>重心坐标==>Ns(Shading normal)
 // Ng可以通过RTCRayHit.ray中的信息拿到，其它的以此类推得到
 
+// 1. scene.interscet
+// 2. rayhit -->postInterset(这个步骤是计算uv，shaderId等)
+// 3. 将postIntersect信息 --> ShaderGlobals(过程类似globals_from_hit)。似乎sg包括differential_geometry信息
+// 4. shadingsys->execute (*ctx, *m_shaders[shaderID], sg); 这样的方式执行shader【ShaderGroupRef】
+//    在这类渲染器中都不使用指针来管理对象，而是通各种id来进行管理：shaderId，geomId，primId(mesh的face)，instId。
+// 5. 这些id信息来自于初始化，类似于管理vector<mesh>, vector<shader>
+class MeshNode: Node {
+	uint32 geomId;
+    uint32 shaderId
+}
+// 当遇到了mesh列表中不存在的mesh(例如通过filename来判断)，就添加进vector <== 前面步骤有待商榷，然后把id设置给meshnode的方法，
+// 总体管理geom的原数据。通过id来索引获取数据信息。所以这种node应该只包括比如transform信息等等？
 ```
 
