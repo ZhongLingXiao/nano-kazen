@@ -134,3 +134,32 @@ class MeshNode: Node {
 // 总体管理geom的原数据。通过id来索引获取数据信息。所以这种node应该只包括比如transform信息等等？
 ```
 
+------
+
+
+
+`2021.11.27 ~ 11.28`**osl和embree中sceneGraph**
+
+```cpp
+// 思考：<--- 进行中，不是最终答案
+// Node类型是Data类型的owner，它并不存储数据。所以有2中类型：xxxNode和xxxData
+// 
+// Data存储数据实体，Node提供数据处理方法
+//
+// 下面的三个信息基本一致
+// embree: 	DifferentialGeometry <-- 来自于RTCRayHitX的构建
+// osl: 	ShaderGlobals
+// nori: 	Intersection
+//
+// embree中renderPixel的流程是这样的:
+// 1. get camera ray
+// 2. RTCIntersectContext + rtcIntersect1 获取RTCRayHit_值
+// 3. 如果没有相交：计算灯光贡献 + background贡献
+// 4. 如果相交：计算dg(DifferentialGeometry)
+// 5. 然后利用dg来计算BSDF和生成BSDF和light sample。这里主要是进行direct light的MIS
+// 6. 生成下一条光线，然后进行loop(终止条件maxBounce或者max_path_length这种)，而不是递归。注意这里没有rr，所以我们需要自己加。
+
+```
+
+------
+
