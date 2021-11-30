@@ -7,6 +7,7 @@
 #include <iostream>
 #include <algorithm>
 #include <stdint.h>
+#include <cmath>
 // 3rd
 #include <fmt/core.h>
 #include <Eigen/Core>
@@ -185,13 +186,17 @@ NAMESPACE_BEGIN(math)
     /// Convert degrees to radians
     inline float degToRad(float value) { return value * (M_PI / 180.0f); }
 
-    #if !defined(_GNU_SOURCE)
-        /// Emulate sincosf using sinf() and cosf()
-        inline void sincosf(float theta, float *_sin, float *_cos) {
-            *_sin = sinf(theta);
-            *_cos = cosf(theta);
-        }
-    #endif
+    // #if !defined(_GNU_SOURCE)
+    //     /// Emulate sincosf using sinf() and cosf()
+    //     inline void sincosf(float theta, float *_sin, float *_cos) {
+    //         *_sin = sinf(theta);
+    //         *_cos = cosf(theta);
+    //     }
+    // #endif
+    inline void sincosf(float theta, float *_sin, float *_cos) {
+            *_sin = std::sin(theta);
+            *_cos = std::cos(theta);
+    }
 
     /// Simple floating point clamping function
     inline float clamp(float value, float min, float max) {

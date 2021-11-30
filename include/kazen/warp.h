@@ -49,6 +49,8 @@ public:
 
     /// Probability density of \ref squareToBeckmann()
     static float squareToBeckmannPdf(const Vector3f &m, float alpha);
+
+    static float intervalToTent(float sample);
 };
 
 NAMESPACE_END(kazen)

@@ -26,5 +26,23 @@ public:
     }
 };
 
+
+class SimpleIntegrator : public Integrator {
+public:
+    SimpleIntegrator(const PropertyList &props) {
+        /* No parameters this time */
+    }
+
+    Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &ray) const {
+
+        return Color3f(0.0f, 0.0f, 0.0f);
+    }
+
+    std::string toString() const {
+        return "SimpleIntegrator[]";
+    }
+};
+
 KAZEN_REGISTER_CLASS(NormalIntegrator, "normals");
+KAZEN_REGISTER_CLASS(SimpleIntegrator, "simple");
 NAMESPACE_END(kazen)

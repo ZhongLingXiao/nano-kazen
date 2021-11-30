@@ -12,7 +12,7 @@ float Warp::squareToUniformSquarePdf(const Point2f &sample) {
     return ((sample.array() >= 0).all() && (sample.array() <= 1).all()) ? 1.0f : 0.0f;
 }
 
-static Float intervalToTent(float sample) {
+float Warp::intervalToTent(float sample) {
     float sign;
 
     if (sample < 0.5f) {
@@ -29,8 +29,8 @@ static Float intervalToTent(float sample) {
 
 Point2f Warp::squareToTent(const Point2f &sample) {
     return Point2f(
-        intervalToTent(sample.x),
-        intervalToTent(sample.y)
+        intervalToTent(sample.x()),
+        intervalToTent(sample.y())
     );
 }
 
@@ -39,11 +39,11 @@ float Warp::squareToTentPdf(const Point2f &p) {
 }
 
 Point2f Warp::squareToUniformDisk(const Point2f &sample) {
-    float r = std::sqrt(sample.x);
+    float r = std::sqrt(sample.x());
     float sinPhi, cosPhi;
-    math::sincosf(2.0f * M_PI * sample.y, &sinPhi, &cosPhi);
+    math::sincosf(2.0f * M_PI * sample.y(), &sinPhi, &cosPhi);
 
-    return Point2(
+    return Point2f(
         cosPhi * r,
         sinPhi * r
     );
@@ -54,10 +54,10 @@ float Warp::squareToUniformDiskPdf(const Point2f &p) {
 }
 
 Vector3f Warp::squareToUniformSphere(const Point2f &sample) {
-    float z = 1.0f - 2.0f * sample.y;
+    float z = 1.0f - 2.0f * sample.y();
     float r = std::sqrt(1.0f - z*z);
     float sinPhi, cosPhi;
-    math::sincosf(2.0f * M_PI * sample.x, &sinPhi, &cosPhi);
+    math::sincosf(2.0f * M_PI * sample.x(), &sinPhi, &cosPhi);
     return Vector3f(r * cosPhi, r * sinPhi, z);
 }
 
@@ -66,11 +66,11 @@ float Warp::squareToUniformSpherePdf(const Vector3f &v) {
 }
 
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
-    float z = sample.x;
+    float z = sample.x();
     float tmp = std::sqrt(1.0f - z*z);
 
     float sinPhi, cosPhi;
-    math::sincosf(2.0f * M_PI * sample.y, &sinPhi, &cosPhi);
+    math::sincosf(2.0f * M_PI * sample.y(), &sinPhi, &cosPhi);
 
     return Vector3f(
         cosPhi * tmp, 
@@ -84,8 +84,8 @@ float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
 
 Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
     // squareToUniformDiskConcentric
-    float r1 = 2.0f*sample.x - 1.0f;
-    float r2 = 2.0f*sample.y - 1.0f;
+    float r1 = 2.0f*sample.x() - 1.0f;
+    float r2 = 2.0f*sample.y() - 1.0f;
 
     /* Modified concencric map code with less branching (by Dave Cline), see
        http://psgraphics.blogspot.ch/2011/01/improved-code-for-concentric-map.html */
@@ -105,33 +105,33 @@ Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
 
     // squareToCosineHemisphere
     Point2f p = Point2f(r * cosPhi, r * sinPhi);
-    float z = std::sqrt(1.0f - p.x*p.x - p.y*p.y);
+    float z = std::sqrt(1.0f - p.x()*p.x() - p.y()*p.y());
 
     /* Guard against numerical imprecisions */
     if (z == 0)
         z = 1e-10f;
 
-    return Vector3f(p.x, p.y, z);
+    return Vector3f(p.x(), p.y(), z);
 }
 
 float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
-    return INV_PI * Frame::cosTheta(d);
+    return INV_PI * Frame::cosTheta(v);
 }
 
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
-	float ln = std::logf(1.0f - Sample.x());
+	float ln = std::log(1.0f - sample.x());
 	if (std::isnan(ln)) {
 		ln = 1.0f;
 	}
 
 	float tan2Theta = -1.0f * alpha * alpha * ln;
-	float cosTheta = 1.0f / std::sqrtf(1.0f + tan2Theta);
-	float sinTheta = std::sqrtf(1.0f - cosTheta * cosTheta);
-	float phi = 2.0f * float(M_PI) * Sample.y();
+	float cosTheta = 1.0f / std::sqrt(1.0f + tan2Theta);
+	float sinTheta = std::sqrt(1.0f - cosTheta * cosTheta);
+	float phi = 2.0f * float(M_PI) * sample.y();
 
 	return Vector3f(
-		sinTheta * std::cosf(phi),
-		sinTheta * std::sinf(phi),
+		sinTheta * std::cos(phi),
+		sinTheta * std::sin(phi),
 		sinTheta
 	);
 
@@ -150,7 +150,7 @@ float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha) {
 		}
 
 		float alpha2 = alpha * alpha;
-		return std::expf(-1.0f * std::powf(tanTheta, 2.0f) / alpha2) / (float(M_PI) * alpha2 * std::powf(cosTheta, 3.0f));
+		return std::exp(-1.0f * std::pow(tanTheta, 2.0f) / alpha2) / (float(M_PI) * alpha2 * std::pow(cosTheta, 3.0f));
 	}
 
 	return 0.0f;

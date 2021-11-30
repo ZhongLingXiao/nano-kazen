@@ -3,15 +3,60 @@
 
 NAMESPACE_BEGIN(kazen)
 
+void Accel::clear() {
+    for (auto &mesh : m_meshes)
+        delete mesh;
+    m_meshes.clear();
+
+    rtcReleaseScene(m_scene); 
+    m_scene = nullptr;
+
+    rtcReleaseDevice(m_device); 
+    m_device = nullptr;
+}
+
 void Accel::addMesh(Mesh *mesh) {
-    if (m_mesh)
-        throw Exception("Accel: only a single mesh is supported!");
-    m_mesh = mesh;
-    m_bbox = m_mesh->getBoundingBox();
+    m_meshes.push_back(mesh);
 }
 
 void Accel::build() {
-    /* Nothing to do here for now */
+    /* create new Embree device */
+    m_device = rtcNewDevice("verbose=1");
+
+    /* create scene */
+    m_scene = rtcNewScene(m_device);
+
+    /* add meshes */
+    unsigned int geomID = 0;
+    for (auto &mesh : m_meshes) {
+        RTCGeometry geom = rtcNewGeometry(m_device, RTC_GEOMETRY_TYPE_TRIANGLE);
+
+        /* fill in geom's vertex and index buffer here */
+        float* vb = (float*) rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3*sizeof(float), mesh->getVertexCount());
+        for (uint32_t i=0; i<mesh->getVertexCount(); ++i) {
+            vb[3*i+0] = mesh->getVertexPositions().col(i)[0]; 
+            vb[3*i+1] = mesh->getVertexPositions().col(i)[1]; 
+            vb[3*i+2] = mesh->getVertexPositions().col(i)[2];
+        }
+
+        unsigned* ib = (unsigned*) rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3*sizeof(unsigned), mesh->getTriangleCount());
+        for (uint32_t i=0; i<mesh->getTriangleCount(); ++i) {
+            ib[3*i+0] = mesh->getIndices()(0, i); 
+            ib[3*i+1] = mesh->getIndices()(1, i); 
+            ib[3*i+2] = mesh->getIndices()(2, i);
+        }
+
+        /* set id for each geometry */
+        rtcCommitGeometry(geom);
+        rtcAttachGeometryByID(m_scene, geom, geomID);
+        rtcReleaseGeometry(geom);
+
+        /* increase this shit */
+        geomID++;
+    }
+    
+    /* commit changes to scene */
+    rtcCommitScene(m_scene);
 }
 
 bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) const {
@@ -20,22 +65,59 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
 
     Ray3f ray(ray_); /// Make a copy of the ray (we will need to update its '.maxt' value)
 
-    /* Brute force search through all triangles */
-    for (uint32_t idx = 0; idx < m_mesh->getTriangleCount(); ++idx) {
-        float u, v, t;
-        if (m_mesh->rayIntersect(idx, ray, u, v, t)) {
-            /* An intersection was found! Can terminate
-               immediately if this is a shadow ray query */
-            if (shadowRay)
-                return true;
-            ray.maxt = its.t = t;
-            its.uv = Point2f(u, v);
-            its.mesh = m_mesh;
-            f = idx;
-            foundIntersection = true;
+    // /* Brute force search through all triangles */
+    // for (uint32_t idx = 0; idx < m_mesh->getTriangleCount(); ++idx) {
+    //     float u, v, t;
+    //     if (m_mesh->rayIntersect(idx, ray, u, v, t)) {
+    //         /* An intersection was found! Can terminate
+    //            immediately if this is a shadow ray query */
+    //         if (shadowRay)
+    //             return true;
+    //         ray.maxt = its.t = t;
+    //         its.uv = Point2f(u, v);
+    //         its.mesh = m_mesh;
+    //         f = idx;
+    //         foundIntersection = true;
+    //     }
+    // }
+
+    /* initialize intersect context */
+    RTCIntersectContext context;
+    rtcInitIntersectContext(&context);
+
+    /* initialize ray */
+    RTCRayHit rayhit; 
+    rayhit.ray.org_x = ray.o.x(); 
+    rayhit.ray.org_y = ray.o.y(); 
+    rayhit.ray.org_z = ray.o.z();
+    rayhit.ray.dir_x = ray.d.x(); 
+    rayhit.ray.dir_y = ray.d.y(); 
+    rayhit.ray.dir_z = ray.d.z();
+    rayhit.ray.tnear  = 0.f;
+    rayhit.ray.tfar   = std::numeric_limits<float>::infinity();
+    rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+
+    /* trace shadow ray */
+    if (shadowRay) {
+        rtcOccluded1(m_scene, &context, &rayhit.ray);
+        if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
+            return true;
+        } else {
+            return false;
         }
     }
+    
+    /* intersect ray with scene */
+    rtcIntersect1(m_scene, &context, &rayhit);
+    if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
+        ray.maxt = its.t = rayhit.ray.tfar;
+        its.uv = Point2f(rayhit.hit.u, rayhit.hit.v);
+        its.mesh = m_meshes[rayhit.hit.geomID];
+        f = rayhit.hit.primID;
+        foundIntersection = true;
+    }
 
+    /* post intersection */
     if (foundIntersection) {
         /* At this point, we now know that there is an intersection,
            and we know the triangle index of the closest such intersection.

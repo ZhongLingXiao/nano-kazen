@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kazen/mesh.h>
+#include <embree3/rtcore.h>
 
 NAMESPACE_BEGIN(kazen)
 
@@ -12,6 +13,13 @@ NAMESPACE_BEGIN(kazen)
  */
 class Accel {
 public:
+
+    /// Release all resources
+    virtual ~Accel() { clear(); };
+    
+    /// Release all resources
+    void clear();
+
     /**
      * \brief Register a triangle mesh for inclusion in the acceleration
      * data structure
@@ -48,8 +56,11 @@ public:
     bool rayIntersect(const Ray3f &ray, Intersection &its, bool shadowRay) const;
 
 private:
-    Mesh         *m_mesh = nullptr; ///< Mesh (only a single one for now)
-    BoundingBox3f m_bbox;           ///< Bounding box of the entire scene
+    std::vector<Mesh *> m_meshes;                   ///< Meshes 
+    BoundingBox3f       m_bbox;                     ///< Bounding box of the entire scene
+    /// embree3 related
+    RTCDevice   m_device = nullptr;
+    RTCScene    m_scene = nullptr;
 };
 
 NAMESPACE_END(kazen)
