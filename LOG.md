@@ -175,3 +175,16 @@ class MeshNode: Node {
 
 ------
 
+
+
+`2021.11.30`**embree3 集成**
+
+```cpp
+// embree3 intersection集成
+// fix warp bug: 主要是eigen取数据的方式是x()而不是x
+// TODO: 渲染结果有错误：是一张全黑的图片，需要debug问题。
+
+```
+
+------
+
