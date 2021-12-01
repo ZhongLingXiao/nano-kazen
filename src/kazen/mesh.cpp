@@ -165,7 +165,7 @@ public:
         Transform trafo = propList.getTransform("toWorld", Transform());
 
         // cout << "Loading \"" << filename << "\" ==> ";
-        LOG("Loading \"{}\" ... ", filename.str());
+        // LOG("Loading Mesh: \"{}\" ... ", filename.str());
         cout.flush();
         Timer timer;
 
@@ -254,6 +254,7 @@ public:
         //      << util::memString(m_F.size() * sizeof(uint32_t) +
         //                   sizeof(float) * (m_V.size() + m_N.size() + m_UV.size()))
         //      << ")" << endl;
+        LOG("Mesh ready. (took {}): \"{}\"", util::timeString(timer.elapsed()), filename.str());
     }
 
 protected:

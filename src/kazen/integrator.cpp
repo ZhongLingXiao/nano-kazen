@@ -7,6 +7,7 @@ class NormalIntegrator : public Integrator {
 public:
     NormalIntegrator(const PropertyList &props) {
         /* No parameters this time */
+        // LOG("intergrator: normal");
     }
 
     Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &ray) const {

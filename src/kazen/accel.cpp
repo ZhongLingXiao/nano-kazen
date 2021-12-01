@@ -1,4 +1,5 @@
 #include <kazen/accel.h>
+#include <kazen/timer.h>
 #include <Eigen/Geometry>
 
 NAMESPACE_BEGIN(kazen)
@@ -20,8 +21,10 @@ void Accel::addMesh(Mesh *mesh) {
 }
 
 void Accel::build() {
+    Timer timer;
+    LOG("================");
     /* create new Embree device */
-    m_device = rtcNewDevice("verbose=1");
+    m_device = rtcNewDevice(nullptr); // "verbose=1"
 
     /* create scene */
     m_scene = rtcNewScene(m_device);
@@ -34,9 +37,9 @@ void Accel::build() {
         /* fill in geom's vertex and index buffer here */
         float* vb = (float*) rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3*sizeof(float), mesh->getVertexCount());
         for (uint32_t i=0; i<mesh->getVertexCount(); ++i) {
-            vb[3*i+0] = mesh->getVertexPositions().col(i)[0]; 
-            vb[3*i+1] = mesh->getVertexPositions().col(i)[1]; 
-            vb[3*i+2] = mesh->getVertexPositions().col(i)[2];
+            vb[3*i+0] = mesh->getVertexPositions().col(i).x(); 
+            vb[3*i+1] = mesh->getVertexPositions().col(i).y(); 
+            vb[3*i+2] = mesh->getVertexPositions().col(i).z();
         }
 
         unsigned* ib = (unsigned*) rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3*sizeof(unsigned), mesh->getTriangleCount());
@@ -57,6 +60,8 @@ void Accel::build() {
     
     /* commit changes to scene */
     rtcCommitScene(m_scene);
+
+    LOG("Embree ready. (took {})", util::timeString(timer.elapsed()));
 }
 
 bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) const {
@@ -93,8 +98,8 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
     rayhit.ray.dir_x = ray.d.x(); 
     rayhit.ray.dir_y = ray.d.y(); 
     rayhit.ray.dir_z = ray.d.z();
-    rayhit.ray.tnear  = 0.f;
-    rayhit.ray.tfar   = std::numeric_limits<float>::infinity();
+    rayhit.ray.tnear  = ray.mint;
+    rayhit.ray.tfar   = ray.maxt;
     rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
 
     /* trace shadow ray */
