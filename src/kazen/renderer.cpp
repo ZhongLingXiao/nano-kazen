@@ -115,7 +115,7 @@ void render(Scene *scene, const std::string &filename) {
         /// (equivalent to the following single-threaded call)
         // map(range);
 
-        LOG("Done. (took {})", timer.elapsedString());
+        LOG("Render ready.  (took {})", timer.elapsedString());
     });
 
     /* Shut down the user interface */
@@ -132,7 +132,7 @@ void render(Scene *scene, const std::string &filename) {
         outputName.erase(lastdot, std::string::npos);
 
     /* Save using the OpenEXR format */
-    bitmap->saveEXR(outputName);
+    // bitmap->saveEXR(outputName);
 
     /* Save tonemapped (sRGB) output using the PNG format */
     bitmap->savePNG(outputName);

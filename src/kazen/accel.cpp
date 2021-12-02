@@ -25,6 +25,9 @@ void Accel::build() {
     LOG("================");
     /* create new Embree device */
     m_device = rtcNewDevice(nullptr); // "verbose=1"
+    if (!m_device) {
+        std::cerr << "Error " << rtcGetDeviceError(nullptr) << " cannot create device" << std::endl;
+    }
 
     /* create scene */
     m_scene = rtcNewScene(m_device);
@@ -35,19 +38,8 @@ void Accel::build() {
         RTCGeometry geom = rtcNewGeometry(m_device, RTC_GEOMETRY_TYPE_TRIANGLE);
 
         /* fill in geom's vertex and index buffer here */
-        float* vb = (float*) rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3*sizeof(float), mesh->getVertexCount());
-        for (uint32_t i=0; i<mesh->getVertexCount(); ++i) {
-            vb[3*i+0] = mesh->getVertexPositions().col(i).x(); 
-            vb[3*i+1] = mesh->getVertexPositions().col(i).y(); 
-            vb[3*i+2] = mesh->getVertexPositions().col(i).z();
-        }
-
-        unsigned* ib = (unsigned*) rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3*sizeof(unsigned), mesh->getTriangleCount());
-        for (uint32_t i=0; i<mesh->getTriangleCount(); ++i) {
-            ib[3*i+0] = mesh->getIndices()(0, i); 
-            ib[3*i+1] = mesh->getIndices()(1, i); 
-            ib[3*i+2] = mesh->getIndices()(2, i);
-        }
+        rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, mesh->getVertexPositions().data(), 0, 3*sizeof(float), mesh->getVertexCount());
+        rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, mesh->getIndices().data(), 0, 3*sizeof(unsigned), mesh->getTriangleCount());
 
         /* set id for each geometry */
         rtcCommitGeometry(geom);
@@ -61,30 +53,12 @@ void Accel::build() {
     /* commit changes to scene */
     rtcCommitScene(m_scene);
 
-    LOG("Embree ready. (took {})", util::timeString(timer.elapsed()));
+    LOG("Embree ready.  (took {})", util::timeString(timer.elapsed()));
 }
 
-bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) const {
+bool Accel::rayIntersect(const Ray3f &ray, Intersection &its, bool shadowRay) const {
     bool foundIntersection = false;  // Was an intersection found so far?
     uint32_t f = (uint32_t) -1;      // Triangle index of the closest intersection
-
-    Ray3f ray(ray_); /// Make a copy of the ray (we will need to update its '.maxt' value)
-
-    // /* Brute force search through all triangles */
-    // for (uint32_t idx = 0; idx < m_mesh->getTriangleCount(); ++idx) {
-    //     float u, v, t;
-    //     if (m_mesh->rayIntersect(idx, ray, u, v, t)) {
-    //         /* An intersection was found! Can terminate
-    //            immediately if this is a shadow ray query */
-    //         if (shadowRay)
-    //             return true;
-    //         ray.maxt = its.t = t;
-    //         its.uv = Point2f(u, v);
-    //         its.mesh = m_mesh;
-    //         f = idx;
-    //         foundIntersection = true;
-    //     }
-    // }
 
     /* initialize intersect context */
     RTCIntersectContext context;
@@ -100,6 +74,8 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
     rayhit.ray.dir_z = ray.d.z();
     rayhit.ray.tnear  = ray.mint;
     rayhit.ray.tfar   = ray.maxt;
+    rayhit.ray.mask = -1;
+    rayhit.ray.flags = 0;
     rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
 
     /* trace shadow ray */
@@ -115,7 +91,7 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
     /* intersect ray with scene */
     rtcIntersect1(m_scene, &context, &rayhit);
     if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
-        ray.maxt = its.t = rayhit.ray.tfar;
+        its.t = rayhit.ray.tfar;
         its.uv = Point2f(rayhit.hit.u, rayhit.hit.v);
         its.mesh = m_meshes[rayhit.hit.geomID];
         f = rayhit.hit.primID;
