@@ -31,6 +31,8 @@ void Accel::build() {
 
     /* create scene */
     m_scene = rtcNewScene(m_device);
+    rtcSetSceneFlags(m_scene, RTC_SCENE_FLAG_ROBUST);
+    rtcSetSceneBuildQuality(m_scene, RTC_BUILD_QUALITY_HIGH);
 
     /* add meshes */
     unsigned int geomID = 0;
@@ -56,9 +58,26 @@ void Accel::build() {
     LOG("Embree ready.  (took {})", util::timeString(timer.elapsed()));
 }
 
-bool Accel::rayIntersect(const Ray3f &ray, Intersection &its, bool shadowRay) const {
+bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) const {
     bool foundIntersection = false;  // Was an intersection found so far?
     uint32_t f = (uint32_t) -1;      // Triangle index of the closest intersection
+    Ray3f ray(ray_);
+
+    // /* Brute force search through all triangles */
+    // for (uint32_t idx = 0; idx < m_meshes[0]->getTriangleCount(); ++idx) {
+    //     float u, v, t;
+    //     if (m_meshes[0]->rayIntersect(idx, ray, u, v, t)) {
+    //         /* An intersection was found! Can terminate
+    //            immediately if this is a shadow ray query */
+    //         if (shadowRay)
+    //             return true;
+    //         ray.maxt = its.t = t;
+    //         its.uv = Point2f(u, v);
+    //         its.mesh = m_meshes[0];
+    //         f = idx;
+    //         foundIntersection = true;
+    //     }
+    // }
 
     /* initialize intersect context */
     RTCIntersectContext context;
@@ -78,20 +97,23 @@ bool Accel::rayIntersect(const Ray3f &ray, Intersection &its, bool shadowRay) co
     rayhit.ray.flags = 0;
     rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
 
+    /* NOTICE: rtcOccluded1 should not use in this way */
     /* trace shadow ray */
-    if (shadowRay) {
-        rtcOccluded1(m_scene, &context, &rayhit.ray);
-        if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+    // if (shadowRay) {
+    //     rtcOccluded1(m_scene, &context, &rayhit.ray);
+    //     if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
+    //         return true;
+    //     } else {
+    //         return false;
+    //     }
+    // }
     
     /* intersect ray with scene */
     rtcIntersect1(m_scene, &context, &rayhit);
     if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
-        its.t = rayhit.ray.tfar;
+        if (shadowRay) // trace shadow ray
+            return true;
+        ray.maxt = its.t = rayhit.ray.tfar;
         its.uv = Point2f(rayhit.hit.u, rayhit.hit.v);
         its.mesh = m_meshes[rayhit.hit.geomID];
         f = rayhit.hit.primID;
