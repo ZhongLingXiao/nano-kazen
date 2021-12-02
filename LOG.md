@@ -188,3 +188,17 @@ class MeshNode: Node {
 
 ------
 
+
+`2021.12.3`**到元旦之前的计划，还有4周**
+
+```cpp
+// light：area和env
+// sampler: zsampler和pmj02bn
+// bsdf: disney brdf
+// texture: oiio textureSys
+// scene: 准备一个cornellbox和麦克风模型
+
+
+```
+
+------
