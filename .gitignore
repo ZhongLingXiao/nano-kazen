@@ -38,3 +38,7 @@
 # vscode
 .vscode/*
 .history/ # Local History for Visual Studio Code
+
+# images
+*.png
+*.exr
