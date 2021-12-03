@@ -3,6 +3,7 @@
 #include <kazen/object.h>
 #include <kazen/frame.h>
 #include <kazen/bbox.h>
+#include <kazen/dpdf.h>
 
 NAMESPACE_BEGIN(kazen)
 
@@ -145,6 +146,12 @@ public:
      * */
     EClassType getClassType() const { return EMesh; }
 
+    /**
+     * \brief Uniformly sample a position on the mesh with
+     * respect to surface area. Returns both position and normal
+     */
+    void sample(Sampler *sampler, Point3f &p, Normal3f &n, float& pdf);
+    
 protected:
     /// Create an empty mesh
     Mesh();
@@ -158,6 +165,8 @@ protected:
     BSDF            *m_bsdf = nullptr;      ///< BSDF of the surface
     Light           *m_light = nullptr;     ///< Associated emitter, if any
     BoundingBox3f   m_bbox;                 ///< Bounding box of the mesh
+    DiscretePDF     *m_dpdf = nullptr;      ///< Pdf for each triangle
+    float           m_area;                 ///< Surface area of mesh
 };
 
 NAMESPACE_END(kazen)

@@ -160,7 +160,7 @@ public:
      * human-readable string format
      */
     std::string toString() const {
-        return "Discrete probability distribution"
+        return "Discrete probability distribution";
     }
 private:
     std::vector<float> m_cdf;

@@ -37,6 +37,11 @@ void Scene::activate() {
         m_sampler = static_cast<Sampler*>(ObjectFactory::createInstance("independent", PropertyList()));
     }
 
+    for (auto &mesh : m_meshes) {
+        if (mesh->isLight()) {
+            m_lights.push_back(mesh);
+        }
+    }
     // cout << endl;
     // cout << "Configuration: " << toString() << endl;
     // cout << endl;
