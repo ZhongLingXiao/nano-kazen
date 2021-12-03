@@ -182,7 +182,23 @@ class MeshNode: Node {
 ```cpp
 // embree3 intersection集成
 // fix warp bug: 主要是eigen取数据的方式是x()而不是x
-// TODO: 渲染结果有错误：是一张全黑的图片，需要debug问题。
+// 1. TODO: 渲染结果有错误：是一张全黑的图片，需要debug问题。
+// 原因分析：需要添加这2行代码
+//    rayhit.ray.mask = -1;
+//    rayhit.ray.flags = 0;
+//
+// 2. 渲染结果不对，阴影错误。原因是错误使用rtcOccluded方法，这个要调研正确使用方法。
+/* NOTICE: rtcOccluded1 should not use in this way */
+/* trace shadow ray */
+// if (shadowRay) {
+//     rtcOccluded1(m_scene, &context, &rayhit.ray);
+//     if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
+//         return true;
+//     } else {
+//         return false;
+//     }
+// }
+
 
 ```
 
