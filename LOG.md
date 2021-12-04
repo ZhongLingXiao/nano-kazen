@@ -227,6 +227,12 @@ class MeshNode: Node {
 // 1. 计算LightQueryRecord中的wi不要忘记normalize
 // 2. 设置shadowRay的时候同时要把tMax和tMin设置，不然错到离谱
 
+// 遗留问题
+// 1. 出现Integrator: computed an invalid radiance value: [-nan, -nan, -nan]
+//    目前猜测是斜掠角导致的除0的问题
+// 2. area light 的pdf和sample函数还有疑问，distance2到底应该放到哪里？ 
+// 3. mis过程重新梳理
+
 
 ```
 
