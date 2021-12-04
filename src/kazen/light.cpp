@@ -15,7 +15,7 @@ public:
         return cosTheta< 0.f ?  m_radiance : 0.f;
     }
 
-    Color3f sample(Mesh *mesh, LightQueryRecord &lRec, Sampler *sampler) const override {
+    Color3f sample(const Mesh *mesh, LightQueryRecord &lRec, Sampler *sampler) const override {       
         mesh->sample(sampler, lRec.p, lRec.n, lRec.pdf);
         lRec.wi = (lRec.p - lRec.ref).normalized();
         lRec.shadowRay = Ray3f(lRec.ref, lRec.wi, Epsilon, (lRec.p-lRec.ref).norm()-Epsilon);
@@ -33,7 +33,7 @@ public:
         return Color3f(0.0f);
     }
 
-    float pdf(Mesh* mesh, const LightQueryRecord &lRec) const override {
+    float pdf(const Mesh* mesh, const LightQueryRecord &lRec) const override {
         float cosTheta = lRec.n.dot(-lRec.wi);
         if (cosTheta > 0.0f) {
             return lRec.pdf;
