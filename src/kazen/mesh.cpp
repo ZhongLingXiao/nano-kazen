@@ -105,7 +105,7 @@ Point3f Mesh::getCentroid(uint32_t index) const {
          m_V.col(m_F(2, index)));
 }
 
-void Mesh::sample(Sampler *sampler, Point3f &p, Normal3f &n, float& pdf) {
+void Mesh::sample(Sampler *sampler, Point3f &p, Normal3f &n, float& pdf) const {
     auto index = m_dpdf->sample(sampler->next1D());
     
     /* sample a barycentric coordinate */

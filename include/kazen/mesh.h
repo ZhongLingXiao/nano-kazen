@@ -150,7 +150,7 @@ public:
      * \brief Uniformly sample a position on the mesh with
      * respect to surface area. Returns both position and normal
      */
-    void sample(Sampler *sampler, Point3f &p, Normal3f &n, float& pdf);
+    void sample(Sampler *sampler, Point3f &p, Normal3f &n, float& pdf) const;
     
 protected:
     /// Create an empty mesh
