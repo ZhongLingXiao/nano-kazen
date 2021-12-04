@@ -46,11 +46,11 @@ public:
 
     virtual ~Light() {}
     
-    virtual Color3f eval(const LightQueryRecord &rec) const = 0;
+    virtual Color3f eval(const LightQueryRecord &lRec) const = 0;
     
-    virtual float pdf(Mesh* mesh, const LightQueryRecord &rec) const = 0;
+    virtual float pdf(Mesh* mesh, const LightQueryRecord &lRec) const = 0;
   
-    virtual Color3f sample(Mesh *mesh, LightQueryRecord &rec, Sampler *sampler) const = 0;
+    virtual Color3f sample(Mesh *mesh, LightQueryRecord &lRec, Sampler *sampler) const = 0;
 
     virtual Color3f getRadiance() const = 0;
 

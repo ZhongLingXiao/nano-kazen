@@ -10,27 +10,34 @@ public:
         m_radiance = propList.getColor("radiance");
     }
 
-    Color3f eval(const LightQueryRecord &rec_) const override {
-        const LightQueryRecord& rec = rec_;
-        return (rec.n.dot(rec.wi) < 0.0f) ? m_radiance : 0.0f;
+    Color3f eval(const LightQueryRecord &lRec) const override {
+        auto cosTheta = lRec.n.dot(lRec.wi);
+        return cosTheta< 0.f ?  m_radiance : 0.f;
     }
 
-    Color3f sample(Mesh *mesh, LightQueryRecord &rec, Sampler *sampler) const override {
-        mesh->sample(sampler, rec.p, rec.n, rec.pdf);
-        rec.wi = (rec.p - rec.ref).normalized();
-        rec.shadowRay = Ray3f(rec.ref, rec.wi, Epsilon, (rec.p-rec.ref).norm()-Epsilon);
-        rec.pdf = pdf(mesh, rec);
-        if (rec.pdf > 0.0f) {
-            return eval(rec) / rec.pdf;
+    Color3f sample(Mesh *mesh, LightQueryRecord &lRec, Sampler *sampler) const override {
+        mesh->sample(sampler, lRec.p, lRec.n, lRec.pdf);
+        lRec.wi = (lRec.p - lRec.ref).normalized();
+        lRec.shadowRay = Ray3f(lRec.ref, lRec.wi, Epsilon, (lRec.p-lRec.ref).norm()-Epsilon);
+        
+        /* Calculate geometric term: G(x<->y) = |ny*(y->x)| / ||x-y||^2 
+         * |nx*(x->y)| using its data, so it should calculate in integrator
+        */
+        float cosTheta = lRec.n.dot(-lRec.wi);
+        auto distance2 = (lRec.p - lRec.ref).squaredNorm();
+        auto g = cosTheta / distance2;
+
+        lRec.pdf = pdf(mesh, lRec);
+        if (lRec.pdf > 0.0f) {
+            return g * eval(lRec) / lRec.pdf; // divided by the probability of the sample y per unit area.
         }
         return Color3f(0.0f);
     }
 
-    float pdf(Mesh* mesh, const LightQueryRecord &rec) const override {
-        float cosTheta = rec.n.dot(-rec.wi);
+    float pdf(Mesh* mesh, const LightQueryRecord &lRec) const override {
+        float cosTheta = lRec.n.dot(-lRec.wi);
         if (cosTheta > 0.0f) {
-            auto distance2 = (rec.p - rec.ref).squaredNorm();
-            return rec.pdf * distance2 / cosTheta;
+            return lRec.pdf;
         }
         return 0.0f;
     }

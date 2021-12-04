@@ -122,27 +122,40 @@ public:
             return Color3f(0.f);
         }
     
-        Color3f Le(0.0f);
+        /* Le term here to account for light sources that were direcly hit by the camera ray. */
+        Color3f le(0.0f);
         if (its.mesh->isLight()) {
-            LightQueryRecord rec(ray.o, its.p, its.shFrame.n);
-            Le = its.mesh->getLight()->eval(rec);
+            LightQueryRecord leRec(ray.o, its.p, its.shFrame.n);
+            le = its.mesh->getLight()->eval(leRec);
         }
 
+        /* Select a random light mesh with mis, it should divide its pdf */
         auto light = scene->getRandomLight();
+
+        /* Get light sample: Ls(y, y->x) */
         LightQueryRecord rec(its.p);
-        Color3f li = light->getLight()->sample(light, rec, sampler);
+        Color3f ls = light->getLight()->sample(light, rec, sampler);
         if (scene->rayIntersect(rec.shadowRay)) {
-            li = 0;
+            ls = 0;
         }
 
+        /* cosine factor is |nx * (x->y)| */
         float cosTheta = Frame::cosTheta(its.shFrame.toLocal(rec.wi));
-        BSDFQueryRecord bRec(its.toLocal(-ray.d), its.toLocal(rec.wi), ESolidAngle);
-        Color3f f = its.mesh->getBSDF()->eval(bRec);
         if (cosTheta < 0) {
             cosTheta = 0;
         }
 
-        return Le + li * f * cosTheta / scene->getLightPdf();
+        /* Calculate bsdf factor */
+        BSDFQueryRecord bRec(its.toLocal(-ray.d), its.toLocal(rec.wi), ESolidAngle);
+        Color3f f = its.mesh->getBSDF()->eval(bRec);
+
+        /* reflection equation */
+        auto lr = f * ls * cosTheta;
+
+        /* Final incident radiance at the camera */
+        auto li = le + lr/scene->getLightPdf();
+
+        return li;
     }
     
     std::string toString() const {
