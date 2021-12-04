@@ -436,6 +436,11 @@ Vector3f refract(const Vector3f &wi, const Vector3f &n, float eta) {
     return n * (-cosThetaI * eta + sign * sqrt(cosThetaT2)) + wi * eta;
 }
 
+Vector3f reflect(const Vector3f &wi, const Vector3f &n) {
+    return 2*n.dot(wi)*n - wi;
+}
+
+
 filesystem::resolver *getFileResolver() {
     static filesystem::resolver *resolver = new filesystem::resolver();
     return resolver;

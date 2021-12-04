@@ -64,7 +64,7 @@ public:
         /* If no reconstruction filter was assigned, instantiate a Gaussian filter */
         if (!m_rfilter)
             m_rfilter = static_cast<ReconstructionFilter *>(
-                ObjectFactory::createInstance("gaussian", PropertyList()));
+                ObjectFactory::createInstance("mitchell", PropertyList()));
     }
 
     Color3f sampleRay(Ray3f &ray,

@@ -119,41 +119,29 @@ float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
 }
 
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
-	float ln = std::log(1.0f - sample.x());
-	if (std::isnan(ln)) {
-		ln = 1.0f;
-	}
-
-	float tan2Theta = -1.0f * alpha * alpha * ln;
-	float cosTheta = 1.0f / std::sqrt(1.0f + tan2Theta);
-	float sinTheta = std::sqrt(1.0f - cosTheta * cosTheta);
-	float phi = 2.0f * float(M_PI) * sample.y();
-
-	return Vector3f(
-		sinTheta * std::cos(phi),
-		sinTheta * std::sin(phi),
-		sinTheta
-	);
-
+    auto phi = 2*M_PI*sample.x();
+    auto invAlpha2 = 1.f/alpha; 
+    invAlpha2 *= invAlpha2;
+    auto theta = std::acos(std::sqrt(1/(1-alpha*alpha*std::log(sample.y()))));
+    
+    return Vector3f(
+        std::sin(theta)*std::cos(phi), 
+        std::sin(theta)*std::sin(phi), 
+        std::cos(theta));
 }
 
 float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha) {
-	if (m.norm() - 1.0f <= 1e-6 && m.z() >= 0.0f) {
-		float cosTheta = Frame::cosTheta(m);
-		if (cosTheta == 0.0f) {
-			return 0.0f;
-		}
 
-		float tanTheta = Frame::tanTheta(m);
-		if (std::isinf(tanTheta)) {
-			return 0.0f;
-		}
-
-		float alpha2 = alpha * alpha;
-		return std::exp(-1.0f * std::pow(tanTheta, 2.0f) / alpha2) / (float(M_PI) * alpha2 * std::pow(cosTheta, 3.0f));
-	}
-
-	return 0.0f;
+    auto cosTheta = Frame::cosTheta(m);
+    auto tanTheta = Frame::tanTheta(m);
+    
+    if(cosTheta <= 0.f)
+        return 0.f;
+    
+    auto azimuthal = 0.5 * INV_PI;
+    auto longitudinal = 2*exp((-tanTheta*tanTheta)/(alpha*alpha))/(alpha*alpha*pow(cosTheta,3));
+    
+    return azimuthal * longitudinal;
 }
 
 NAMESPACE_END(kazen)

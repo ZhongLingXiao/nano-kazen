@@ -23,12 +23,11 @@ public:
         /* Calculate geometric term: G(x<->y) = |ny*(y->x)| / ||x-y||^2 
          * |nx*(x->y)| using its data, so it should calculate in integrator
         */
-        float cosTheta = lRec.n.dot(-lRec.wi);
-        auto distance2 = (lRec.p - lRec.ref).squaredNorm();
-        auto g = cosTheta / distance2;
-
         lRec.pdf = pdf(mesh, lRec);
-        if (lRec.pdf > 0.0f) {
+        if (lRec.pdf > 0.f) {
+            auto cosTheta = lRec.n.dot(-lRec.wi);
+            auto distance2 = (lRec.p - lRec.ref).squaredNorm();
+            auto g = cosTheta / distance2;
             return g * eval(lRec) / lRec.pdf; // divided by the probability of the sample y per unit area.
         }
         return Color3f(0.0f);
