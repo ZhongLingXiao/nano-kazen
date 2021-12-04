@@ -218,3 +218,16 @@ class MeshNode: Node {
 ```
 
 ------
+
+
+`2021.12.5`**Whitted-style integrator练习**
+
+```cpp
+// 错误总结：
+// 1. 计算LightQueryRecord中的wi不要忘记normalize
+// 2. 设置shadowRay的时候同时要把tMax和tMin设置，不然错到离谱
+
+
+```
+
+------
