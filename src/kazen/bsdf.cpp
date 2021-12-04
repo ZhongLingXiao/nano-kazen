@@ -106,7 +106,29 @@ public:
     }
 
     Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
-        throw Exception("Unimplemented!");
+        bRec.measure = EDiscrete;
+
+        auto cosThetaI = Frame::cosTheta(bRec.wi);
+        auto fresnelTerm = fresnel(cosThetaI, m_extIOR, m_intIOR);
+
+        if (sample.x() < fresnelTerm) {
+            /* Reflect wo = -wi + 2*dot(wi, n)*n. In this case is much simpler:
+            https://www.pbr-book.org/3ed-2018/Reflection_Models/Specular_Reflection_and_Transmission*/
+            bRec.wo = Vector3f(-bRec.wi.x(), -bRec.wi.y(), bRec.wi.z());
+            bRec.eta = 1.f;
+            return Color3f(1.0f);
+        } else {
+            auto n = Vector3f(0.0f, 0.0f, 1.0f);
+            auto factor = m_intIOR / m_extIOR;
+            /* inside out */
+            if (Frame::cosTheta(bRec.wi) < 0.f) {
+                factor = m_extIOR / m_intIOR;
+                n.z() = -1.0f;
+            }
+            bRec.wo = refract(-bRec.wi, n, factor);
+            bRec.eta = m_intIOR / m_extIOR;
+            return Color3f(1.0f);
+        }   
     }
 
     std::string toString() const {

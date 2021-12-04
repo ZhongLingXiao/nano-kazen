@@ -425,6 +425,17 @@ float fresnel(float cosThetaI, float extIOR, float intIOR) {
     return (Rs * Rs + Rp * Rp) / 2.0f;
 }
 
+Vector3f refract(const Vector3f &wi, const Vector3f &n, float eta) {
+    auto cosThetaI = wi.dot(n);
+    if (cosThetaI < 0)
+        eta = 1.0f / eta;
+    auto cosThetaT2 = 1 - (1 - cosThetaI * cosThetaI) * (eta * eta);
+    if (cosThetaT2 <= 0.0f)
+        return Vector3f(0.0f);
+    auto sign = cosThetaI >= 0.0f ? 1.0f : -1.0f;
+    return n * (-cosThetaI * eta + sign * sqrt(cosThetaT2)) + wi * eta;
+}
+
 filesystem::resolver *getFileResolver() {
     static filesystem::resolver *resolver = new filesystem::resolver();
     return resolver;

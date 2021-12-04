@@ -129,33 +129,43 @@ public:
             le = its.mesh->getLight()->eval(leRec);
         }
 
-        /* Select a random light mesh with mis, it should divide its pdf */
-        auto light = scene->getRandomLight();
+        if (its.mesh->getBSDF()->isDiffuse()) {
+            /* Select a random light mesh with mis, it should divide its pdf */
+            auto light = scene->getRandomLight();
 
-        /* Get light sample: Ls(y, y->x) */
-        LightQueryRecord rec(its.p);
-        Color3f ls = light->getLight()->sample(light, rec, sampler);
-        if (scene->rayIntersect(rec.shadowRay)) {
-            ls = 0;
+            /* Get light sample: Ls(y, y->x) */
+            LightQueryRecord rec(its.p);
+            Color3f ls = light->getLight()->sample(light, rec, sampler);
+            if (scene->rayIntersect(rec.shadowRay)) {
+                ls = 0;
+            }
+
+            /* cosine factor is |nx * (x->y)| */
+            float cosTheta = Frame::cosTheta(its.shFrame.toLocal(rec.wi));
+            if (cosTheta < 0) {
+                cosTheta = 0;
+            }
+
+            /* Calculate bsdf factor */
+            BSDFQueryRecord bRec(its.toLocal(-ray.d), its.toLocal(rec.wi), ESolidAngle);
+            Color3f f = its.mesh->getBSDF()->eval(bRec);
+
+            /* reflection equation */
+            auto lr = f * ls * cosTheta;
+
+            /* Final incident radiance at the camera */
+            auto li = le + lr/scene->getLightPdf();
+
+            return li;
+        } else {
+            BSDFQueryRecord bRec(its.toLocal(-ray.d));
+            Color3f reflect = its.mesh->getBSDF()->sample(bRec, sampler->next2D());
+            if (sampler->next1D() < 0.95) {
+                return reflect * Li(scene, sampler, Ray3f(its.p, its.toWorld(bRec.wo))) / 0.95;
+            } else {
+                return Color3f(0.0f);
+            }
         }
-
-        /* cosine factor is |nx * (x->y)| */
-        float cosTheta = Frame::cosTheta(its.shFrame.toLocal(rec.wi));
-        if (cosTheta < 0) {
-            cosTheta = 0;
-        }
-
-        /* Calculate bsdf factor */
-        BSDFQueryRecord bRec(its.toLocal(-ray.d), its.toLocal(rec.wi), ESolidAngle);
-        Color3f f = its.mesh->getBSDF()->eval(bRec);
-
-        /* reflection equation */
-        auto lr = f * ls * cosTheta;
-
-        /* Final incident radiance at the camera */
-        auto li = le + lr/scene->getLightPdf();
-
-        return li;
     }
     
     std::string toString() const {
