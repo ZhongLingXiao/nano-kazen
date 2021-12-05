@@ -227,6 +227,7 @@ class MeshNode: Node {
 // 1. 计算LightQueryRecord中的wi不要忘记normalize
 // 2. 设置shadowRay的时候同时要把tMax和tMin设置，不然错到离谱
 // 3. 【遗留2】渲染方程里是定义在立体角上，需要直接转换成立体角上的pdf，也就是将distance2/cosTheta放到pdf中
+// 4. 对于rfilter: mitchell会出现光源周围出现黑边(估计是默认参数设置太小)，暂时使用gaussian
 // 
 // 遗留问题
 // 1. 出现Integrator: computed an invalid radiance value: [-nan, -nan, -nan]
