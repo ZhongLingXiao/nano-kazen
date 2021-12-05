@@ -24,21 +24,25 @@ public:
          * |nx*(x->y)| using its data, so it should calculate in integrator
         */
         lRec.pdf = pdf(mesh, lRec);
-        if (lRec.pdf > 0.f) {
-            auto cosTheta = lRec.n.dot(-lRec.wi);
-            auto distance2 = (lRec.p - lRec.ref).squaredNorm();
-            auto g = cosTheta / distance2;
-            return g * eval(lRec) / lRec.pdf; // divided by the probability of the sample y per unit area.
+        if (lRec.pdf > 0.f && !std::isnan(lRec.pdf) && !std::isinf(lRec.pdf)) {
+            return eval(lRec) / lRec.pdf; // divided by the probability of the sample y per unit area.
         }
-        return Color3f(0.0f);
+        return Color3f(0.f);
     }
 
     float pdf(const Mesh* mesh, const LightQueryRecord &lRec) const override {
         float cosTheta = lRec.n.dot(-lRec.wi);
-        if (cosTheta > 0.0f) {
-            return lRec.pdf;
+        /* For balance heuristic: Transform the integration variable from the position domain to solid angle domain
+         *
+         * Remember that this only makes sense if both probabilities are expressed in the same measure 
+         * (i.e. with respect to solid angles or unit area). This means that you will have convert one 
+         * * of them to the measure of the other (which one doesn't matter).
+        */
+        if (cosTheta > 0.f) {
+            auto distance2 = (lRec.p - lRec.ref).squaredNorm();
+            return lRec.pdf * distance2 / cosTheta;
         }
-        return 0.0f;
+        return 0.f; // if back-facing surface encountered
     }
 
     Color3f getRadiance() const override {
