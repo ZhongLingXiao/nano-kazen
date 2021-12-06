@@ -239,3 +239,20 @@ class MeshNode: Node {
 ```
 
 ------
+
+
+`2021.12.7`**MIS + NEE完成**
+
+```cpp
+// 进度展望
+// 目前MIS+NEE流程完成，余下3部分：
+// 1. texture：oiio里面有大坑，比如textureSys创建单一一个，还是tls多个？
+//    那内存如何分配？等等，目前简单材质一个ts肯定够用，后面tex量上来了，就不好说了
+// 2. 当tex完成之后就可以进行env light的实现
+// 3. brdf材质扩展：https://github.com/boksajak/brdf/blob/master/brdf.h
+// 4. sampler：pmj02bn暂时就这一个，然后和independent对比一下效果。使用方法还要再确认
+
+
+```
+
+------
