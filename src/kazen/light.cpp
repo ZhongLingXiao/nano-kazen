@@ -16,7 +16,7 @@ public:
     }
 
     Color3f sample(const Mesh *mesh, LightQueryRecord &lRec, Sampler *sampler) const override {       
-        mesh->sample(sampler, lRec.p, lRec.n, lRec.pdf);
+        mesh->sample(sampler, lRec.p, lRec.n);
         lRec.wi = (lRec.p - lRec.ref).normalized();
         lRec.shadowRay = Ray3f(lRec.ref, lRec.wi, Epsilon, (lRec.p-lRec.ref).norm()-Epsilon);
         
@@ -31,6 +31,7 @@ public:
     }
 
     float pdf(const Mesh* mesh, const LightQueryRecord &lRec) const override {
+        float pdf = mesh->pdf(); // mesh pdf
         float cosTheta = lRec.n.dot(-lRec.wi);
         /* For balance heuristic: Transform the integration variable from the position domain to solid angle domain
          *
@@ -40,7 +41,7 @@ public:
         */
         if (cosTheta > 0.f) {
             auto distance2 = (lRec.p - lRec.ref).squaredNorm();
-            return lRec.pdf * distance2 / cosTheta;
+            return pdf * distance2 / cosTheta;
         }
         return 0.f; // if back-facing surface encountered
     }

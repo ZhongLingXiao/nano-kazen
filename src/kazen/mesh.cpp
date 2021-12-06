@@ -105,7 +105,7 @@ Point3f Mesh::getCentroid(uint32_t index) const {
          m_V.col(m_F(2, index)));
 }
 
-void Mesh::sample(Sampler *sampler, Point3f &p, Normal3f &n, float& pdf) const {
+void Mesh::sample(Sampler *sampler, Point3f &p, Normal3f &n) const {
     auto index = m_dpdf->sample(sampler->next1D());
     
     /* sample a barycentric coordinate */
@@ -126,10 +126,7 @@ void Mesh::sample(Sampler *sampler, Point3f &p, Normal3f &n, float& pdf) const {
         n.normalized();
 	} else {
 		n = (p1 - p0).cross(p2 - p0).normalized();
-	}  
-
-    /* the pdf is equal inverse of area */
-    pdf = m_dpdf->getNormalization(); 
+	} 
 }
 
 

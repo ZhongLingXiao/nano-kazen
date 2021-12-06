@@ -41,10 +41,18 @@ public:
     const std::vector<Mesh *> &getMeshes() const { return m_meshes; }
 
     /// Return a random light mesh
-    Mesh *getRandomLight() const { return m_lights.at((int)(drand48() * m_lights.size())); }
+    Mesh *getRandomLight(float rnd) const {         
+        auto const & n = m_lights.size();
+        size_t index = std::min(
+                static_cast<size_t>(std::floor(n*rnd)),
+                n-1);
+        return m_lights[index]; 
+    }
 
     /// Return a light's pdf
     float getLightPdf() const { return 1.f/m_lights.size(); }
+
+    const std::vector<Mesh *> &getLights() const { return m_lights; }
 
     /**
      * \brief Intersect a ray against all triangles stored in the scene

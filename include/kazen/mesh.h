@@ -150,7 +150,12 @@ public:
      * \brief Uniformly sample a position on the mesh with
      * respect to surface area. Returns both position and normal
      */
-    void sample(Sampler *sampler, Point3f &p, Normal3f &n, float& pdf) const;
+    void sample(Sampler *sampler, Point3f &p, Normal3f &n) const;
+
+    float pdf() const { 
+        /* the pdf is equal inverse of area */
+        return m_dpdf->getNormalization(); 
+    } 
     
 protected:
     /// Create an empty mesh

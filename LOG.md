@@ -233,7 +233,7 @@ class MeshNode: Node {
 // 1. 出现Integrator: computed an invalid radiance value: [-nan, -nan, -nan]
 //    目前猜测是斜掠角导致的除0的问题
 // 2. 【解决】area light 的pdf和sample函数还有疑问，distance2到底应该放到哪里？ 
-// 3. mis过程重新梳理
+// 3. 【解决】mis过程重新梳理 (之前一直错误的原因是pdf被重复计算，现在pdf函数被隔离出来)
 
 
 ```
