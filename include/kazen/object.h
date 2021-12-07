@@ -23,6 +23,7 @@ public:
         EIntegrator,
         ESampler,
         EReconstructionFilter,
+        ETexture,
         EClassTypeCount
     };
 
@@ -78,6 +79,7 @@ public:
             case ECamera:       return "camera";
             case EIntegrator:   return "integrator";
             case ESampler:      return "sampler";
+            case ETexture:      return "texture";
             default:            return "<unknown>";
         }
     }

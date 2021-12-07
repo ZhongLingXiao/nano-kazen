@@ -77,6 +77,7 @@ add_executable(kazen
     include/kazen/rfilter.h
     include/kazen/sampler.h
     include/kazen/scene.h
+    include/kazen/texture.h
     include/kazen/timer.h
     include/kazen/transform.h
     include/kazen/vector.h

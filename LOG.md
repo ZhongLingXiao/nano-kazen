@@ -205,6 +205,7 @@ class MeshNode: Node {
 ------
 
 
+
 `2021.12.3`**到元旦之前的计划，还有4周**
 
 ```cpp
@@ -218,6 +219,7 @@ class MeshNode: Node {
 ```
 
 ------
+
 
 
 `2021.12.5`**Whitted-style integrator练习**
@@ -241,6 +243,7 @@ class MeshNode: Node {
 ------
 
 
+
 `2021.12.7`**MIS + NEE完成**
 
 ```cpp
@@ -256,3 +259,31 @@ class MeshNode: Node {
 ```
 
 ------
+
+
+
+`2021.12.8`**texture相关问题的思考及设计**
+
+```cpp
+// 1. mesh还是bsdf中应该有texture对象？感觉应该是bsdf合理，材质关联texture，mesh如果需要query tex数据可通过类似getBSDF().getTexture()
+// 来获取数据。似乎这样设计更合理
+//
+// 2. 记住个名词ROI：ROI is a small helper struct describing a rectangular region of interest in an image.
+// 3. 由于oiio对颜色完成了很好的处理(集成ocio2.0)，所以简单调研了下颜色：https://zhuanlan.zhihu.com/p/24214731
+// 4. texture基本形式应该是这样的，但是如何对应参数？
+/*
+	<mesh type="obj">
+		<string name="filename" value="ajax.obj"/>
+
+		<bsdf type="microfacet">
+			<texture name="intIOR" type="image">
+				<string name="filename" value="baseColor.png"/>
+			</texture>
+		</bsdf>
+	</mesh>
+*/
+
+```
+
+
+
