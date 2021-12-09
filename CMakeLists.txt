@@ -101,6 +101,7 @@ add_executable(kazen
     src/kazen/rfilter.cpp
     src/kazen/sampler.cpp
     src/kazen/scene.cpp
+    src/kazen/texture.cpp
     src/kazen/warp.cpp
 
     # experimental code

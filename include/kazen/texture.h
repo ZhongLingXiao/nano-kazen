@@ -4,10 +4,11 @@
 
 NAMESPACE_BEGIN(kazen)
 
+template<typename T>
 class Texture : public Object {
 public:
 
-    virtual Color3f sample(Point2f &uv) const = 0;
+    virtual Color3f eval(Point2f &uv) const = 0;
 
     /**
      * \brief Return the type of object (i.e. Mesh/BSDF/etc.)
