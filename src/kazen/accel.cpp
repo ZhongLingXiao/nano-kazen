@@ -1,5 +1,6 @@
 #include <kazen/accel.h>
 #include <kazen/timer.h>
+#include <kazen/bsdf.h>
 #include <Eigen/Geometry>
 
 NAMESPACE_BEGIN(kazen)
@@ -172,6 +173,25 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
         } else {
             its.shFrame = its.geoFrame;
         }
+
+        // /* Normal mapping */
+        // auto normalMap = its.mesh->getBSDF()->getNormalMap();
+        // if (normalMap) {
+        //     Color3f rgb = normalMap->eval(its.uv, false);
+        //     Vector3f localNormal(2 * rgb.r() - 1, 2 * rgb.g() - 1, 2 * rgb.b() - 1);
+        //     Vector3f dpdu = its.geoFrame.t;
+
+        //     Vector3f n = its.shFrame.n;
+        //     Vector3f s = (dpdu - n * n.dot(dpdu)).normalized();
+        //     Vector3f t( n(1) * s(2) - n(2) * s(1),
+        //                 n(2) * s(0) - n(0) * s(2),
+        //                 n(0) * s(1) - n(1) * s(0));
+        //     t.normalize();
+
+        //     Frame localFrame = Frame(s,t,n);
+        //     Vector3f worldNormal = localFrame.toWorld(localNormal.normalized());
+        //     its.shFrame = Frame(worldNormal);
+        // }
     }
 
     return foundIntersection;

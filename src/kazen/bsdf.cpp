@@ -1,6 +1,7 @@
 #include <kazen/bsdf.h>
 #include <kazen/frame.h>
 #include <kazen/warp.h>
+#include <kazen/texture.h>
 
 NAMESPACE_BEGIN(kazen)
 
@@ -323,8 +324,118 @@ private:
     Color3f m_kd;
 };
 
+/**
+ * \brief TODO: TextureBSDF is Diffuse BRDF model with texture param
+ */
+class TextureBSDF : public BSDF {
+public:
+    TextureBSDF(const PropertyList &propList) { }
+
+    ~TextureBSDF() {
+        delete m_albedo;
+    }
+
+    /// Evaluate the BRDF model
+    Color3f eval(const BSDFQueryRecord &bRec) const {
+        /* This is a smooth BRDF -- return zero if the measure
+           is wrong, or when queried for illumination on the backside */
+        if (bRec.measure != ESolidAngle
+            || Frame::cosTheta(bRec.wi) <= 0
+            || Frame::cosTheta(bRec.wo) <= 0)
+            return Color3f(0.0f);
+
+        /* The BRDF is simply the albedo / pi */
+        auto color = m_albedo->eval(bRec.uv);
+        return color * INV_PI;
+    }
+
+    /// Compute the density of \ref sample() wrt. solid angles
+    float pdf(const BSDFQueryRecord &bRec) const {
+        /* This is a smooth BRDF -- return zero if the measure
+           is wrong, or when queried for illumination on the backside */
+        if (bRec.measure != ESolidAngle
+            || Frame::cosTheta(bRec.wi) <= 0
+            || Frame::cosTheta(bRec.wo) <= 0)
+            return 0.0f;
+
+
+        /* Importance sampling density wrt. solid angles:
+           cos(theta) / pi.
+
+           Note that the directions in 'bRec' are in local coordinates,
+           so Frame::cosTheta() actually just returns the 'z' component.
+        */
+        return INV_PI * Frame::cosTheta(bRec.wo);
+    }
+
+    /// Draw a a sample from the BRDF model
+    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
+        if (Frame::cosTheta(bRec.wi) <= 0)
+            return Color3f(0.0f);
+
+        bRec.measure = ESolidAngle;
+
+        /* Warp a uniformly distributed sample on [0,1]^2
+           to a direction on a cosine-weighted hemisphere */
+        bRec.wo = Warp::squareToCosineHemisphere(sample);
+
+        /* Relative index of refraction: no change */
+        bRec.eta = 1.0f;
+
+        /* eval() / pdf() * cos(theta) = albedo. There
+           is no need to call these functions. */
+        auto color = m_albedo->eval(bRec.uv);
+        return color;
+    }
+
+    bool isDiffuse() const {
+        return true;
+    }
+
+    /// Register a child object (e.g. a Texture) with the BSDF
+    void addChild(Object *child) override {
+        switch (child->getClassType()) {
+            case ETexture:
+                if(child->getId() == "albedo") {
+                    if (m_albedo)
+                        throw Exception("There is already an albedo defined!");
+                    m_albedo = static_cast<Texture<Color3f> *>(child);
+                }
+                else if (child->getId() == "normal") {
+                    if (m_normal) 
+                        throw Exception("Do not support multiple normal maps");
+                    m_normal = static_cast<Texture<Color3f> *>(child);
+                }
+                else {
+                    throw Exception("The name of this texture does not match any field!");
+                }
+                break;
+            default:
+                throw Exception("TextureBSDF: addChild<%s> is not supported other than normal maps", child->getId());
+        }
+    }
+
+    Texture<Color3f>* getNormalMap() const override {
+        return m_normal;
+    }
+
+    /// Return a human-readable summary
+    std::string toString() const {
+        return fmt::format("TextureBSDF[]");
+    }
+
+    EClassType getClassType() const { return EBSDF; }
+private:
+    Texture<Color3f>* m_albedo = nullptr;
+    Texture<Color3f>* m_normal = nullptr;
+};
+
+
+
+
 KAZEN_REGISTER_CLASS(Diffuse, "diffuse");
 KAZEN_REGISTER_CLASS(Dielectric, "dielectric");
 KAZEN_REGISTER_CLASS(Mirror, "mirror");
 KAZEN_REGISTER_CLASS(Microfacet, "microfacet");
+KAZEN_REGISTER_CLASS(TextureBSDF, "texturebsdf"); /// remove later
 NAMESPACE_END(kazen)

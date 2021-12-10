@@ -70,6 +70,7 @@ Object *loadFromXML(const std::string &filename) {
         ECamera                 = Object::ECamera,
         EIntegrator             = Object::EIntegrator,
         ESampler                = Object::ESampler,
+        ETexture                = Object::ETexture,
         EReconstructionFilter   = Object::EReconstructionFilter,
 
         /* Properties */
@@ -101,6 +102,7 @@ Object *loadFromXML(const std::string &filename) {
     tags["phase"]       = EPhaseFunction;
     tags["integrator"]  = EIntegrator;
     tags["sampler"]     = ESampler;
+    tags["texture"]     = ETexture;
     tags["rfilter"]     = EReconstructionFilter;
     tags["boolean"]     = EBoolean;
     tags["integer"]     = EInteger;
@@ -187,7 +189,9 @@ Object *loadFromXML(const std::string &filename) {
         Object *result = nullptr;
         try {
             if (currentIsObject) {
-                check_attributes(node, { "type" });
+                
+                // TODO: rm this line temporary
+                // check_attributes(node, { "type", "name" });
 
                 /* This is an object, first instantiate it */
                 result = ObjectFactory::createInstance(
@@ -203,6 +207,9 @@ Object *loadFromXML(const std::string &filename) {
                         Object::classTypeName((Object::EClassType) tag),
                         result->toString());
                 }
+
+                /* Set the name to help parent decide what to do with this node */
+                result->setId(node.attribute("name").value());
 
                 /* Add all children */
                 for (auto ch: children) {

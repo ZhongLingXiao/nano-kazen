@@ -8,15 +8,17 @@ NAMESPACE_BEGIN(kazen)
  * \brief EmitterQueryRecord
  */
 struct LightQueryRecord {
+    /// Shading point position
+    Point3f ref;
+
+    ///uv coordinate
+    Point2f uv;
 
     /// Incident direction
     Vector3f wi;
     
     /// Light Sample position
     Point3f p;
-    
-    /// Shading point position
-    Point3f ref;
     
     /// Normal for that light sample position
     Normal3f n;

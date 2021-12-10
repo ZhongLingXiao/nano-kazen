@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kazen/object.h>
+#include <kazen/texture.h>
 
 NAMESPACE_BEGIN(kazen)
 
@@ -95,6 +96,9 @@ public:
      * or not to store photons on a surface
      */
     virtual bool isDiffuse() const { return false; }
+
+    /// Get normal map
+    virtual Texture<Color3f>* getNormalMap() const { return nullptr; }
 };
 
 NAMESPACE_END(kazen)

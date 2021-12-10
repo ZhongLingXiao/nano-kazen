@@ -69,6 +69,10 @@ public:
     /// Return a brief string summary of the instance (for debugging purposes)
     virtual std::string toString() const = 0;
     
+    /// Allow to assign a name(id) to the object
+    void setId(const std::string & id) { m_id = id; }
+    const std::string & getId() const { return m_id; }
+
     /// Turn a class type into a human-readable string
     static std::string classTypeName(EClassType type) {
         switch (type) {
@@ -83,6 +87,10 @@ public:
             default:            return "<unknown>";
         }
     }
+
+    protected:
+        std::string m_id;
+
 };
 
 /**

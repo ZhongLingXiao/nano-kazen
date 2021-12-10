@@ -201,6 +201,7 @@ public:
             /* ----------------------- Intersection with lights ----------------------- */
             if (its.mesh->isLight()) {
                 LightQueryRecord lRec(ray.o, its.p, its.shFrame.n);
+                lRec.uv = its.uv;
                 Li += bsdfWeight * throughput * its.mesh->getLight()->eval(lRec);
             }
       
@@ -221,6 +222,7 @@ public:
             const Mesh* mesh = scene->getRandomLight(sampler->next1D());
             const Light* light = mesh->getLight();
             LightQueryRecord lRec(its.p);
+            lRec.uv = its.uv;
             Color3f Ls = light->sample(mesh, lRec, sampler) / scene->getLightPdf();
            
             auto lightPdf = light->pdf(mesh, lRec);
@@ -229,6 +231,7 @@ public:
 
                 /* Query the BSDF for that emitter-sampled direction */
                 BSDFQueryRecord bRec(its.toLocal(-ray.d), its.toLocal(lRec.wi), ESolidAngle);
+                bRec.uv = its.uv;
                 Color3f f = its.mesh->getBSDF()->eval(bRec);
 
                 /* Determine density of sampling that same direction using BSDF sampling */
@@ -240,6 +243,7 @@ public:
 
             /* ----------------------- BSDF sampling ----------------------- */
             BSDFQueryRecord bRec(its.shFrame.toLocal(-ray.d));
+            bRec.uv = its.uv;
             auto bsdfColor = its.mesh->getBSDF()->sample(bRec, sampler->next2D()); // Sample BSDF * cos(theta)
             throughput *= bsdfColor;
             eta *= bRec.eta;
@@ -255,6 +259,7 @@ public:
                direction using emitter sampling. */
             if (its.mesh->isLight()) {
                 LightQueryRecord lRec_ = LightQueryRecord(ray.o, its.p, its.shFrame.n);
+                lRec_.uv = its.uv;
                 float lightPdf_ = its.mesh->getLight()->pdf(its.mesh, lRec_);
                 bsdfWeight = powerHeuristic(bsdfPdf, lightPdf_);
             }
