@@ -284,6 +284,17 @@ class MeshNode: Node {
 */
 
 ```
+------
 
 
+
+`2021.12.12`**一些简单实现**
+
+```cpp
+// 1. texture中使用bitmap存储管理数据(目前只支持init from exr)
+// 2. 【TODO】squareToDisk: https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#SamplingaUnitDisk
+// 3. 【TODO】normal map实现
+// 4. disney bsdf
+
+```
 
