@@ -299,6 +299,8 @@ NAMESPACE_END(string)
 
 
 /// color
+
+/* This method also known as gammaCorrect() */
 Color3f Color3f::toSRGB() const {
     Color3f result;
 

@@ -6,6 +6,18 @@ NAMESPACE_BEGIN(kazen)
 
 Bitmap::Bitmap(const std::string &filename) {
     // TODO: load from file
+    /* Load in image info */
+    auto in = OIIO::ImageInput::open(filename);
+    if (!in)
+        throw Exception("Fail to open texure: {}", filename);
+    const OIIO::ImageSpec &spec = in->spec();
+    if (spec.nchannels != 3)
+        throw Exception("Bitmap: Only support 3 channel file for now");
+    
+    resize(spec.width, spec.height); // Notice here
+    in->read_image(OIIO::TypeDesc::FLOAT, data());
+    in->close ();
+    LOG("Reading a EXR file[{}x{}] from : {}", cols(), rows(), filename);   
 }
 
 void Bitmap::saveEXR(const std::string &filename) {

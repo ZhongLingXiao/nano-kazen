@@ -12,7 +12,7 @@ NAMESPACE_BEGIN(kazen)
  */
 class Bitmap : public Eigen::Array<Color3f, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> {
 public:
-    typedef Eigen::Array<Color3f, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Base;
+    using Base = Eigen::Array<Color3f, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
 
     /**
      * \brief Allocate a new bitmap of the specified size

@@ -108,7 +108,9 @@ Point3f Mesh::getCentroid(uint32_t index) const {
 void Mesh::sample(Sampler *sampler, Point3f &p, Normal3f &n) const {
     auto index = m_dpdf->sample(sampler->next1D());
     
-    /* sample a barycentric coordinate */
+    /* sample a barycentric coordinate: pbrt-13.6.5 Sampling a Triangle
+    https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#SamplingaUnitDisk
+    */
     float sqrtOneMinusEpsilon = std::sqrt(1-sampler->next1D());
     float alpha = 1 - sqrtOneMinusEpsilon ;
     float beta = sampler->next1D() * sqrtOneMinusEpsilon;
