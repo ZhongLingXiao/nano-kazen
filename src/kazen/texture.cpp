@@ -19,8 +19,8 @@ public:
         const OIIO::ImageSpec &spec = in->spec();
         m_width = spec.width;
         m_height = spec.height;
-        int channels = spec.nchannels;
-        m_data.resize(m_width*m_height*channels);
+        m_channels = spec.nchannels;
+        m_data.resize(m_width*m_height*m_channels);
         in->read_image(OIIO::TypeDesc::UINT8, &m_data[0]);
         in->close ();
     }
@@ -33,14 +33,14 @@ public:
         int v = (int)dv;
 
         /* Find the index by multiplying the v for the width. */
-        long index = (v * m_width + u)*4;
+        long index = (v * m_width + u)*m_channels;
         index = index % m_data.size(); 
 
         //http://viclw17.github.io/2019/04/12/raytracing-uv-mapping-and-texturing/
         auto rcp = 1.f / 255.f;
-        float r = m_data[index] * rcp;
-        float g = m_data[index + 1] * rcp;
-        float b = m_data[index + 2] * rcp;
+        float r = (m_channels > 0) ? float(m_data[index]) * rcp : 0.f;
+        float g = (m_channels > 1) ? float(m_data[index+1]) * rcp : r;
+        float b = (m_channels > 2) ? float(m_data[index+2]) * rcp : ((m_channels == 1) ? r : 0.f);
 
         /* Notice: Needed toLinearRGB to get linear color workflow */
         if (linear)
@@ -63,6 +63,7 @@ private:
     std::vector<unsigned char> m_data;
     unsigned m_width;
     unsigned m_height;
+    int m_channels = 0;
 };
 
 
