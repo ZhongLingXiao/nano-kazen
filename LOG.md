@@ -284,6 +284,7 @@ class MeshNode: Node {
 */
 
 ```
+
 ------
 
 
@@ -298,3 +299,16 @@ class MeshNode: Node {
 
 ```
 
+------
+
+
+
+`2021.12.14`**env-light的设计思考**
+
+```cpp
+// 1. 将shape作为基类抽离出来，创建子类sphere
+// 2. sphere作为user geom加入embree：定义intersection方法等<user_geometry>
+// 3. bitmap中对texel类型的处理
+// 4. 【重难点】Hierarchical Sample Warping
+
+```
