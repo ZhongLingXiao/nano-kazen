@@ -19,3 +19,35 @@
 - [ ] wavefront gpu如何混合xpu
 - [ ] benchmark & debug tool & visualization tool
 - [ ] API design & pybind
+
+
+
+------
+
+**《kazen con 1》 memo**
+
+宣布成立：kazen advance render technology team
+
+Demo场景: https://www.youtube.com/watch?v=95sfHIngAYI : 2022.3.1
+
+- pbr材质
+- 面光源
+- 模型
+
+`Zhong`：
+
+- [ ] texture
+- [ ] Disney BSDF
+- [ ] normal
+- [ ] 场景搭建
+
+`Chen`:
+
+- [ ] 积分器
+- [ ] interface design
+- [ ] shader global 中各项属性的计算，比如shading normal，geometry normal
+- [ ] disney bsdf
+- [ ] texture support
+
+
+
