@@ -11,8 +11,8 @@ public:
     }
 
     Color3f eval(const LightQueryRecord &lRec) const override {
-        auto cosTheta = lRec.n.dot(lRec.wi);
-        return cosTheta< 0.f ?  m_radiance : 0.f;
+        auto cosTheta = lRec.n.dot(-lRec.wi);
+        return cosTheta > 0.f ?  m_radiance : 0.f;
     }
 
     Color3f sample(const Mesh *mesh, LightQueryRecord &lRec, Sampler *sampler) const override {       
@@ -37,7 +37,8 @@ public:
          *
          * Remember that this only makes sense if both probabilities are expressed in the same measure 
          * (i.e. with respect to solid angles or unit area). This means that you will have convert one 
-         * * of them to the measure of the other (which one doesn't matter).
+         * of them to the measure of the other (which one doesn't matter).
+         * pbrt-v3: 14.2.2 Sampling Shapes
         */
         if (cosTheta > 0.f) {
             auto distance2 = (lRec.p - lRec.ref).squaredNorm();
@@ -46,7 +47,7 @@ public:
         return 0.f; // if back-facing surface encountered
     }
 
-    Color3f getRadiance() const override {
+    Color3f getRadiance() const {
         return m_radiance;
     }
 
