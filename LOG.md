@@ -312,3 +312,44 @@ class MeshNode: Node {
 // 4. 【重难点】Hierarchical Sample Warping
 
 ```
+
+------
+
+
+
+`2022.1.10`**specular到ior的转换**
+
+```cpp
+#include <iostream>
+#include <cmath>
+
+float sqr(float a) {
+    return a * a;
+};
+
+// https://docs.blender.org/manual/en/latest/render/shader_nodes/shader/principled.html
+float specular(float ior) {
+    return sqr((ior-1.f)/(ior+1.f))/0.08;
+};
+
+float ior(float specular) {
+    return 2.f/(1.f - std::sqrt(0.08*specular)) - 1.f;
+};
+
+int main() {
+
+    auto specular = 0.5f;
+    auto eta = ior(specular);
+    auto F0 = sqr((eta-1.f)/(eta+1.f));
+
+    std::cout << F0 << std::endl;
+
+    return 0;
+}
+```
+
+| specular |  0   | 0.5  |  1   |
+| :------- | :--: | :--: | :--: |
+| ior      |  1   | 1.5  | 1.8  |
+| F0       |  0   | 0.04 | 0.08 |
+
