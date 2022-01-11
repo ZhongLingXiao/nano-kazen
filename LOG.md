@@ -353,3 +353,42 @@ int main() {
 | ior      |  1   | 1.5  | 1.8  |
 | F0       |  0   | 0.04 | 0.08 |
 
+------
+
+
+
+`2022.1.11`**smith ggx**
+$$
+\Lambda(v)=\frac{-1+\sqrt{1+\frac{1}{a^{2}}}}{2}
+其中a=\frac{1}{\alpha tan\theta_{o}}
+$$
+
+```cpp
+// 市面上的实现没有统一
+
+// 1. disney brdf所谓的G选项，mmp/SORT采用的方法，他自己说clearcoat有firefly... 所以这个实现有问题？
+float smithG_GGX(float NdotV, float alphaG)
+{
+    float a = alphaG*alphaG;
+    float b = NdotV*NdotV;
+    return 1 / (NdotV + sqrt(a + b - a*b));
+}
+
+// 2. G = 1 / 1 + lambda 的标准形式
+// GGX法线分布的Λ函数
+float SmithG(float NDotV, float alphaG)
+{
+    float a = alphaG * alphaG;
+    float b = NDotV * NDotV;
+    return (2.0 * NDotV) / (NDotV + sqrt(a + b - a * b));
+}
+
+// 3. Selas的做法，cosTheta应该是tanTheta才对。这个做法有问题？
+float SeparableSmithGGXG1(const float3& w, float a)
+{
+    float a2 = a * a;
+    float absDotNV = AbsCosTheta(w);
+
+    return 2.0f / (1.0f + Math::Sqrtf(a2 + (1 - a2) * absDotNV * absDotNV));
+}
+```
