@@ -366,7 +366,12 @@ $$
 ```cpp
 // 市面上的实现没有统一
 
-// 1. disney brdf所谓的G选项，mmp/SORT采用的方法，他自己说clearcoat有firefly... 所以这个实现有问题？
+// 1. disney brdf所谓的G选项，mmp/SORT/tinsel等采用的方法，这里我们的实现以官方为准
+// 之所以是这样是因为clearcoat的eval函数是：
+// F * D * G / 4.f
+//
+// 这里约掉了上面的NdotV(cosThetaI & cosThetaO)，但是里面的2为什么没了？
+// tinsel中已经改成了F * D * G了
 float smithG_GGX(float NdotV, float alphaG)
 {
     float a = alphaG*alphaG;
@@ -383,7 +388,7 @@ float SmithG(float NDotV, float alphaG)
     return (2.0 * NDotV) / (NDotV + sqrt(a + b - a * b));
 }
 
-// 3. Selas的做法，cosTheta应该是tanTheta才对。这个做法有问题？
+// 3. Selas的做法，看上去是错的
 float SeparableSmithGGXG1(const float3& w, float a)
 {
     float a2 = a * a;
@@ -391,4 +396,168 @@ float SeparableSmithGGXG1(const float3& w, float a)
 
     return 2.0f / (1.0f + Math::Sqrtf(a2 + (1 - a2) * absDotNV * absDotNV));
 }
+
+//-----------------------------------------------------------------------
+G1= 1.f / (1+lambda)
+其中Trowbridge–Reitz 分布函数是：
+lambda=（-1+sqrt(1+alpha^2*tanTheta^2)
+
+然后用代码的形式表示是这样的：
+// 2. G = 1 / 1 + lambda 的标准形式
+// GGX法线分布的Λ函数
+float SmithG(float NDotV, float alphaG)
+{
+    float a = alphaG * alphaG;
+    float b = NDotV * NDotV;
+    return (2.0 * NDotV) / (NDotV + sqrt(a + b - a * b));
+}
+
+对比一下disney使用的smithGGX：
+// disney clearcloat ggx
+float disneySmithG(float NdotV, float alphaG)
+{
+    float a = alphaG*alphaG;
+    float b = NdotV*NdotV;
+    return 1 / (NdotV + sqrt(a + b - a*b));
+}
+两者相差2*cosTheta
+
+
+第一个问题 ：为什么没有cosThetaI*cosThetaO？
+这就能解释了函数为什么是F * D * G / 4.f，因为约掉了cosThetaI*cosThetaO这项
+
+
+第二个问题：specular项就只剩下 Gs*Fs*Ds了？
+这是因为，specular中的G1用的是标准SmithG，对比一下disneySmithG，少了一个2。G=G1(l)*G1(v)，就是2x2=4。这样上下约掉了4。就变成了F*D*G
 ```
+
+------
+
+
+
+`2022.1.15`**eval() 函数revisit**
+
+```c++
+// eval = f*cosThetaO
+// 这里我们把cosThetaO直接乘进来，然后约掉，这样做的好处是
+// 在intergrator中的计算可以用eval * Ls得到光源贡献，不需要*cosThetaO。更加简洁
+float eval() {
+	return F * D * G / (4.f * cosThetaI);    
+}
+
+```
+
+------
+
+
+
+`2022.1.16`**disney specular brdf**
+
+```c++
+/// f = F * D * G / (4.f * Frame3f::cos_theta(si.wi));
+
+
+/// ---- Fresnel 部分 
+
+// https://github.com/mmp/pbrt-v3/tree/master/src/materials
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+
+
+/// Anisotropic specular detail
+// https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf
+// Addend部分
+void calculateAnisotropicParams(float roughness, float anisotropic, float& ax, float& ay)
+{
+ 	float aspect = sqrt(1.0f - 0.9f * anisotropic);
+	ax = max(0.001f, sqr(roughness) / aspect);
+    ay = max(0.001f, sqr(roughness) * aspect);
+}
+
+/// ---- NDF 部分
+
+// https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf
+// 附录B.2中的(10-13)
+// 
+// 上面记录了转化的过程，所以可以有两种表示形式：
+// hDotX = sinThetaH * cosThetaPhi
+// hDotY = sinThetaH * sinThetaPhi
+// hDotN = cosThetaH
+
+// 计算效率更高的版本：an efficient alternate f
+float GgxAnisotropicD(const float3& wm, float ax, float ay)
+{
+    float dotHX2 = Square(wm.x);
+    float dotHY2 = Square(wm.y); // Selas的做法是dotHY=wm.z，错误，当然可能是它的渲染器的坐标系不同
+    float cos2Theta = Cos2Theta(wm);
+    float ax2 = Square(ax);
+    float ay2 = Square(ay);
+
+    return 1.0f / (Math::Pi_ * ax * ay * Square(dotHX2 / ax2 + dotHY2 / ay2 + cos2Theta));
+}
+
+// PBRT-v3的做法
+Float TrowbridgeReitzDistribution::D(const Vector3f &wh) const {
+    Float tan2Theta = Tan2Theta(wh);
+    if (std::isinf(tan2Theta)) return 0.;
+    const Float cos4Theta = Cos2Theta(wh) * Cos2Theta(wh);
+    Float e = (Cos2Phi(wh) / (alphax * alphax) + Sin2Phi(wh) / (alphay * alphay)) * tan2Theta;
+    
+    return 1.f / (Pi * alphax * alphay * cos4Theta * (1 + e) * (1 + e));
+}
+
+// 其中sinPhi和cosPhi为：
+{
+    /** \brief Assuming that the given direction is in the local coordinate 
+     * system, return the sine of the phi parameter in spherical coordinates */
+    static float sinPhi(const Vector3f &v) {
+        float sinTheta = Frame::sinTheta(v);
+        if (sinTheta == 0.0f)
+            return 1.0f;
+        return math::clamp(v.y() / sinTheta, -1.0f, 1.0f);
+    }
+
+    /** \brief Assuming that the given direction is in the local coordinate 
+     * system, return the cosine of the phi parameter in spherical coordinates */
+    static float cosPhi(const Vector3f &v) {
+        float sinTheta = Frame::sinTheta(v);
+        if (sinTheta == 0.0f)
+            return 1.0f;
+        return math::clamp(v.x() / sinTheta, -1.0f, 1.0f);
+    }
+}
+
+// mitsuba2的标准做法
+{
+	Float alpha_uv = m_alpha_u * m_alpha_v,
+			cos_theta         = Frame3f::cos_theta(m),
+			cos_theta_2       = sqr(cos_theta),
+	// GGX / Trowbridge-Reitz distribution function
+	Float result = rcp(Pi * alpha_uv * sqr(sqr(m.x() / m_alpha_u) + sqr(m.y() / m_alpha_v) + sqr(m.z())));
+}
+
+
+/// ---- G 部分
+
+/// Smith's separable shadowing-masking approximation
+Float G(const Vector3f &wi, const Vector3f &wo, const Vector3f &m) const {
+	return smith_g1(wi, m) * smith_g1(wo, m);
+}
+
+Float smith_g1(const Vector3f &v, const Vector3f &m) const {
+	Float xy_alpha_2 = sqr(m_alpha_u * v.x()) + sqr(m_alpha_v * v.y()),
+			tan_theta_alpha_2 = xy_alpha_2 / sqr(v.z()),
+    Float result = 2.f / (1.f + sqrt(1.f + tan_theta_alpha_2));
+}
+
+```
+
+------
+
+
+
+`2022.1.16`**disney specular bsdf**
+
+```c++
+
+```
+
