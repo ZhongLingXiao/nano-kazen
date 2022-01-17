@@ -336,6 +336,13 @@ float ior(float specular) {
     return 2.f/(1.f - std::sqrt(0.08*specular)) - 1.f;
 };
 
+// 下面这个一般是标准做法，disney的做法避免了该方法，使用的是F0=0.08*specular的做法
+// For a dielectric, R(0) = (eta - 1)^2 / (eta + 1)^2, assuming we're
+// coming from air. pbrt-v3
+// https://blog.selfshadow.com/publications/s2015-shading-course/burley/s2015_pbs_disney_bsdf_notes.pdf
+// 3.1 (7) ==> F0=((eta - 1) / (eta + 1))^2
+float SchlickR0FromEta(float eta) { return sqr(eta - 1) / sqr(eta + 1); }
+
 int main() {
 
     auto specular = 0.5f;
@@ -454,14 +461,33 @@ float eval() {
 `2022.1.16`**disney specular brdf**
 
 ```c++
-/// f = F * D * G / (4.f * Frame3f::cos_theta(si.wi));
+/// eval(): f = F * D * G / (4.f * Frame3f::cos_theta(si.wi));
 
 
 /// ---- Fresnel 部分 
 
 // https://github.com/mmp/pbrt-v3/tree/master/src/materials
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+///////////////////////////////////////////////////////////////////////////
+// 这里我们还是用F0=0.08*specular的简化方法来避免艺术家直接操作eta，这个参数不是很直观
+// 具体实现：https://github.com/wdas/brdf/blob/main/src/brdfs/disney.brdf
+// 另外：需要实现DisneyFresnel，即：将fresnelDielectric和schlickFresnel根据metallic参数进行插值，
+float3 DisneyFresnel(const SurfaceParameters& surface, const float3& wo, const float3& wm, const float3& wi)
+{
+	float dotHV = Dot(wm, wo);
 
+	float3 tint = CalculateTint(surface.baseColor);
+
+    // -- See section 3.1 and 3.2 of the 2015 PBR presentation + the Disney BRDF explorer (which does their 2012 remapping
+    // -- rather than the SchlickR0FromRelativeIOR seen here but they mentioned the switch in 3.2).
+    float3 R0 = Fresnel::SchlickR0FromRelativeIOR(surface.relativeIOR) * Lerp(float3(1.0f), tint, surface.specularTint);
+    R0 = Lerp(R0, surface.baseColor, surface.metallic);
+
+    float dielectricFresnel = Fresnel::Dielectric(dotHV, 1.0f, surface.ior);
+    float3 metallicFresnel = Fresnel::Schlick(R0, Dot(wi, wm));
+
+    return Lerp(float3(dielectricFresnel), metallicFresnel, surface.metallic);
+}
 
 /// Anisotropic specular detail
 // https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf
@@ -549,15 +575,48 @@ Float smith_g1(const Vector3f &v, const Vector3f &m) const {
     Float result = 2.f / (1.f + sqrt(1.f + tan_theta_alpha_2));
 }
 
+// pdf():  
+// p = D*cosTheta/4*hDotL
+Float MicrofacetDistribution::Pdf(const Vector3f &wo,
+                                  const Vector3f &wh) const {
+    if (sampleVisibleArea)
+        return D(wh) * G1(wo) * AbsDot(wo, wh) / AbsCosTheta(wo);
+    else
+        return D(wh) * AbsCosTheta(wh);
+}
+
+Float MicrofacetReflection::Pdf(const Vector3f &wo, const Vector3f &wi) const {
+    if (!SameHemisphere(wo, wi)) return 0;
+    Vector3f wh = Normalize(wo + wi);
+    return distribution->Pdf(wo, wh) / (4 * Dot(wo, wh));
+}
 ```
 
 ------
 
 
 
-`2022.1.16`**disney specular bsdf**
+`2022.1.17`**VNDF(sample_visible)是怎么回事？**
 
-```c++
+可以先从这里看起来：https://schuttejoe.github.io/post/ggximportancesamplingpart2
 
-```
+它是来自于Eric Heitz和Eugene d’Eon的文章：
 
+1. [《Importance Sampling Microfacet-Based BSDFs using the Distribution of Visible Normals》](https://hal.inria.fr/hal-00996995v1/document)
+2. [《A Simpler and Exact Sampling Routine for the GGX Distribution of Visible Normals》](https://hal.archives-ouvertes.fr/hal-01509746/document)
+
+顺便说一下：mitsuba2里面的mircofacet.h的实现还包括了另外2篇文章：
+
+1. 《Microfacet Models for Refraction through Rough Surfaces》by Bruce Walter, Stephen R. Marschner, Hongsong Li, and Kenneth E. Torrance
+2. 《An Improved Visible Normal Sampling Routine for the Beckmann Distribution》 by Wenzel Jakob
+
+Walter07的那篇要好好看一下，后面的refrection也会用。
+
+
+
+VNDF主要解决的问题是：只对NDF进行importance sampling会出现2种问题
+
+- firefly：个用来描述单个像素比它周围的像素亮得多的渲染术语
+- 浪费采样
+
+这些情况经常性出现在low glancing angle的地方
