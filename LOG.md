@@ -757,8 +757,7 @@ void Li(Ray& ray, Sampler* sampler) {
         // 即dot(n, wi) > 0
         // 不然的话dot(n, ray.d) < 0，使用起来很不直观
         intersection.p = ray.o * ray.t * ray.d;
-        intersection.n = normalize(m_scene->interpolateNormal(
-            								ray.GeomID, ray.primID, ray.uv));
+        intersection.n = normalize(m_scene->interpolateNormal(ray.GeomID, ray.primID, ray.uv));
         intersection.wi = normalize(-ray.d);
         
         // 计算直接光照
