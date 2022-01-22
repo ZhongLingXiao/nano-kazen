@@ -558,7 +558,8 @@ Float TrowbridgeReitzDistribution::D(const Vector3f &wh) const {
 			cos_theta         = Frame3f::cos_theta(m),
 			cos_theta_2       = sqr(cos_theta),
 	// GGX / Trowbridge-Reitz distribution function
-	Float result = rcp(Pi * alpha_uv * sqr(sqr(m.x() / m_alpha_u) + sqr(m.y() / m_alpha_v) + sqr(m.z())));
+	Float result = rcp(Pi * alpha_uv * sqr(sqr(m.x() / m_alpha_u) + 
+                                           sqr(m.y() / m_alpha_v) + sqr(m.z())));
 }
 
 
@@ -598,6 +599,10 @@ Float MicrofacetReflection::Pdf(const Vector3f &wo, const Vector3f &wi) const {
 
 `2022.1.17`**VNDF(sample_visible)是怎么回事？**
 
+> 这个是对**分布函数**进行采样，例如`TrowbridgeReitzDistribution`或者`BeckmannDistribution`
+
+
+
 可以先从这里看起来：https://schuttejoe.github.io/post/ggximportancesamplingpart2
 
 它是来自于Eric Heitz和Eugene d’Eon的文章：
@@ -620,3 +625,324 @@ VNDF主要解决的问题是：只对NDF进行importance sampling会出现2种�
 - 浪费采样
 
 这些情况经常性出现在low glancing angle的地方
+
+```c++
+// sample VNDF的5个步骤
+vec3 sampleGGXVNDF(vec3 V_, float alpha_x, float alpha_y, float U1, float U2)
+{
+    // 1. stretch view
+    vec3 V = normalize(vec3(alpha_x * V_.x, alpha_y * V_.y, V_.z));
+    
+    // 2. orthonormal basis
+    vec3 T1 = (V.z < 0.9999) ? normalize(cross(V, vec3(0,0,1))) : vec3(1,0,0);
+    vec3 T2 = cross(T1, V);
+    
+    // 3. sample point with polar coordinates (r, phi)
+    float a = 1.0 / (1.0 + V.z);
+    float r = sqrt(U1);
+    float phi = (U2<a) ? U2/a * M_PI : M_PI + (U2-a)/(1.0-a) * M_PI;
+    float P1 = r*cos(phi);
+    float P2 = r*sin(phi)*((U2<a) ? 1.0 : V.z);
+    
+    // 4. compute normal
+    vec3 N = P1*T1 + P2*T2 + sqrt(max(0.0, 1.0 - P1*P1 - P2*P2))*V;
+    
+    // 5. unstretch
+    N = normalize(vec3(alpha_x*N.x, alpha_y*N.y, max(0.0, N.z)));
+	
+    return N;
+}
+```
+
+
+
+------
+
+`2022.1.18`**【未解决】mis-path的一些问题**
+
+path integrator中的`light sample`过程中会判断：shadowRay是否与场景相交。如果是的话，则认为有物体遮挡，不计算这种direct light的贡献。
+
+**但是，对于材质如果是玻璃这种，似乎不成立也不合理**。
+
+- 如果`light sample`贡献为0，那么是不是应该提高`bsdf sample`的权重，而放弃`powerHeuristic`？
+- 之前`roughDielectric`结果比较暗，如果提高`bsdf sample`的权重会怎么样？
+
+
+
+------
+
+
+
+`2022.1.19`**bsdf system设计的思考**
+
+通过观察：pbrt和mitsuba2中的做法是，设计一个microfacet的文件。这里文件中包含的是分布函数类，例如
+
+```cpp
+// pbrt-v3的做法是派生了2个子类，mitsuba2的做法是只有一个类，然后判断通过MicrofacetType来进行区分计算
+// enum class MicrofacetType : uint32_t {
+//    /// Beckmann distribution derived from Gaussian random surfaces
+//    Beckmann = 0,
+//    /// GGX: Long-tailed distribution for very rough surfaces (Trowbridge-Reitz distr.)
+//    GGX = 1
+//};
+//
+// 这里的sampleVisibleArea或者sample_visible就是之前看过的VNDF的计算
+class MicrofacetDistribution {
+  public:
+    // MicrofacetDistribution Public Methods
+    virtual ~MicrofacetDistribution();
+    virtual Float D(const Vector3f &wh) const = 0;
+    virtual Float Lambda(const Vector3f &w) const = 0;
+    Float G1(const Vector3f &w) const {
+        //    if (Dot(w, wh) * CosTheta(w) < 0.) return 0.;
+        return 1 / (1 + Lambda(w));
+    }
+    virtual Float G(const Vector3f &wo, const Vector3f &wi) const {
+        return 1 / (1 + Lambda(wo) + Lambda(wi));
+    }
+    virtual Vector3f Sample_wh(const Vector3f &wo, const Point2f &u) const = 0;
+    Float Pdf(const Vector3f &wo, const Vector3f &wh) const;
+    virtual std::string ToString() const = 0;
+
+  protected:
+    // MicrofacetDistribution Protected Methods
+    MicrofacetDistribution(bool sampleVisibleArea)
+        : sampleVisibleArea(sampleVisibleArea) {}
+
+    // MicrofacetDistribution Protected Data
+    const bool sampleVisibleArea;
+};
+```
+
+------
+
+
+
+`2022.1.22`**review RichieSams的integrator实现方式**
+
+```c++
+// 更加清晰的积分器实现
+void Li(Ray& ray, Sampler* sampler) {
+    // 
+    float3 color = 0.f;
+    float3 throughput = 1.f;
+    Intersection intersection;
+    
+    // 场景中开始发射光线，这个版本是有最大弹射次数(maxBounces)限制的
+    const uint maxBounces = 15;
+    for (uint bounces=0; bounces<maxBounces; ++bounces) {
+        
+        m_scene->intersect(ray);
+        
+        // 如果ray与场景没有相交，那么返回backgroundColor
+        if (ray.GeomID == INVAILD_GEOMETRY_ID) {
+            color += throughput * m_scene.getBackgroundColor();
+            break;
+        }
+
+        // 获取当前材质
+        Material* material = m_scene->getMaterial(ray.GeomID);
+        // geom对象有可能是light，这里我们尝试获取对应的light
+        Light* light = m_scene->getLight(ray>GeomID);
+        
+        // 击中光源，计算Le贡献
+        if (light != nullptr) {
+            color += throughput * light->Le();
+        }
+        
+        // 设置intersection数据
+        // p,n分别为位置和法线信息
+        // wi指的是入射方向，在渲染器中通常可以理解为eye相对于hitpoint的方向，
+        // 所以wi与射线(ray.d)的方向相反。另外就是为了方便计算cos等数据，
+        // 即dot(n, wi) > 0
+        // 不然的话dot(n, ray.d) < 0，使用起来很不直观
+        intersection.p = ray.o * ray.t * ray.d;
+        intersection.n = normalize(m_scene->interpolateNormal(
+            								ray.GeomID, ray.primID, ray.uv));
+        intersection.wi = normalize(-ray.d);
+        
+        // 计算直接光照
+        color += throughput * sampleOneLight(sampler, interaction, material->bsdf, light);
+        
+        // 下一步就是确定新的射线方向
+        // 我们需要根据bsdf sample获取wo的方向
+        //
+        // 这里需要注意的是，先要采样，得到intersection.wo方向，
+        // 才能计算pdf。所以下面的两个函数是有先后顺序的
+        material->getBSDF()->sample(intersection, sampler); 
+        float pdf = material->getBSDF->pdf(intersection);
+        
+        // 计算throughput，throughput可以翻译为通量，
+        // 其实就是指当前路径片段(w1 -> w2)的贡献值
+        //
+        // 一条完整的路径(w0->w1->w2...->wn)，可以理解为：w0是眼睛，wn是最终的光源。
+        // 由于pbr原则：光路可逆，所以对于wn来说w(n-1)就相当于eye的方向
+        // 他们组成的“光源-着色点-眼睛的直接光照模型”中w(n-1)的能量来自于wn；
+        // w(n-2)的能量来自于w(n-1) ... w0的能量来自与w1。
+        // 所以通量可以理解为：这种通过路径逐层返回的能量。
+        // 那么它的计算方式就是：t(当前) = t(上一层) * 当前材质的衰减;
+        //
+        // 一般的设计中：sample会有一个return值color，color=eval/pdf。
+        // 但这里的设计就是sample返回void，然后在外面计算贡献。哪种更清晰一点呢？
+        throughput = throughput * material->getBSDF()->eval(intersection)/pdf; 
+        	
+        // 通过intersection的p和wo更新ray的信息
+        ray.o = intersection.p;
+        ray.d = intersection.wo;
+        ray.min = 0.001f;
+        ray.max = infinity;
+        
+        // 最后，当bounce数目大于3的时候，进行Russian Roulette。太早进行rr效果不好
+        if (bounces > 3) {
+			float p = throughput.maxCoeff();
+         	if (p < sampler->next1D()) {
+          		break;
+            }
+            
+            throughput /= p;            
+        }
+    
+    } // end: for loop
+} // end: Li()
+
+
+```
+
+
+
+**光源采样**
+
+```c++
+// 这里认为光源的pdf = 1 / numLights;
+// 则场景光源贡献是：estimateDirect / pdf == estimateDirect * numLights
+float3 sampleOneLight(Sampler *sampler, Interaction interaction, BSDF *bsdf, Light *hitLight) const {
+    std::size_t numLights = m_scene->NumLights();
+
+    // Return black if there are no lights
+    // And don't let a light contribute light to itself
+    // Aka, if we hit a light
+    // This is the special case where there is only 1 light
+    if (numLights == 0 || numLights == 1 && hitLight != nullptr) {
+        return float3(0.f);
+    }
+
+    // Don't let a light contribute light to itself
+    // Choose another one
+    Light *light;
+    do {
+        light = m_scene->randomOneLight(sampler);
+    } while (light == hitLight);
+
+    return numLights * estimateDirect(light, sampler, interaction, bsdf);
+}
+```
+
+
+
+**NEE with mis**
+
+```c++
+// 这里感觉estimateDirect并不合适，因为这里使用了mis对bsdf进行eval
+// 通常我们应该称这个函数为：NEE (Next event estimate)
+float3 estimateDirect(Light *light, Sampler *sampler, Interaction &interaction, BSDF *bsdf) const {
+    float3 directLighting = float3(0.0f);
+    float3 f; // brdf
+    float lightPdf, bsdfPdf;
+
+
+    // Sample lighting with multiple importance sampling
+    // Only sample if the BRDF is non-specular 
+    if ((bsdf->SupportedLobes & ~BSDFLobe::Specular) != 0) {
+        float3 Li = light->sampleLi(sampler, m_scene, interaction, &lightPdf);
+
+        // Make sure the pdf isn't zero and the radiance isn't black
+        if (lightPdf != 0.0f && !all(Li)) {
+            // Calculate the brdf value
+            f = bsdf->eval(interaction);
+            bsdfPdf = bsdf->pdf(interaction);
+
+            if (bsdfPdf != 0.0f && !all(f)) {
+                float weight = powerHeuristic(lightPdf, bsdfPdf);
+                // 这里更直观的写法是：(f*Li/lightPdf) * weight
+                directLighting += f * Li * weight / lightPdf;
+            }
+        }
+    }
+
+
+    // Sample brdf with multiple importance sampling
+    bsdf->Sample(interaction, sampler);
+    f = bsdf->eval(interaction);
+    bsdfPdf = bsdf->pdf(interaction);
+    if (bsdfPdf != 0.0f && !all(f)) {
+        lightPdf = light->pdfLi(m_scene, interaction);
+        if (lightPdf == 0.0f) {
+            // We didn't hit anything, so ignore the brdf sample
+            return directLighting;
+        }
+
+        float weight = powerHeuristic(bsdfPdf, lightPdf);
+        float3 Li = light->Le();
+        directLighting += f * Li * weight / bsdfPdf;
+    }
+
+    return directLighting;
+}
+```
+
+NEE过程解析
+
+> 1. **First, we sample the light**
+>
+>    - This updates `interaction.wo`（光源方向）
+>    - Gives us the `Li` for the light
+>    - And the pdf of choosing that point on the light
+>
+> 2. Check that the pdf is valid and the radiance is non-zero
+>
+> 3. Evaluate the BSDF using the sampled `interaction.wo`
+>
+> 4. Calculate the pdf for the BSDF given the sampled `interaction.wo`
+>
+>    - Essentially, how likely is this sample, if we were to sample using the BSDF, instead of the light
+>
+> 5. Calculate the weight, using the light pdf and the BSDF pdf
+>
+>    - Veach and Guibas define a couple different ways to calculate the weight. Experimentally, they found the 
+>
+>      power heuristic with a power of 2 to work the best for most cases. I refer you to the paper for more details. 
+>
+>      The implementation is below
+>
+> 6. Multiply the weight with the direct lighting calculation and divide by the light pdf. (For Monte Carlo) And add to the direct light accumulation.
+>
+> 7. **Then, we sample the BRDF**
+>
+>    - This updates `interaction.wo`
+>
+> 8. Evaluate the BRDF
+>
+> 9. Get the pdf for choosing this direction based on the BRDF
+>
+> 10. Calculate the light pdf, given the sampled `interaction.wo`
+>
+>     - This is the mirror of before. How likely is this direction, if we were to sample the light
+>
+> 11. `If lightPdf == 0.f`, then the ray missed the light, so just return the direct lighting from the light sample.
+>
+> 12. Otherwise, calculate the weight, and add the BSDF direct lighting to the accumulation
+>
+> 13. Finally, return the accumulated direct lighting
+
+
+
+**powerHeuristic**
+
+```
+inline float powerHeuristic(float fPdf, float gPdf) {
+    float f = fPdf;
+    float g = gPdf;
+
+    return (f * f) / (f * f + g * g);
+}
+```
