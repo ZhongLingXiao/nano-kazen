@@ -793,9 +793,9 @@ void Li(Ray& ray, Sampler* sampler) {
         
         // 最后，当bounce数目大于3的时候，进行Russian Roulette。太早进行rr效果不好
         if (bounces > 3) {
-			float p = throughput.maxCoeff();
+         	float p = throughput.maxCoeff();
          	if (p < sampler->next1D()) {
-          		break;
+                break;
             }
             
             throughput /= p;            
