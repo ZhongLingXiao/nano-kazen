@@ -763,6 +763,10 @@ void Li(Ray& ray, Sampler* sampler) {
         // 计算直接光照
         color += throughput * sampleOneLight(sampler, interaction, material->bsdf, light);
         
+        // [ISSUE]: 这里的方向是新采样的，但是NEE过程中已经有sample了,
+        // 所以为什么不复用？比如，直接用interaction.wo进行eval
+        // 但这个做法是pbrt的做法
+        //
         // 下一步就是确定新的射线方向
         // 我们需要根据bsdf sample获取wo的方向
         //
@@ -842,7 +846,7 @@ float3 sampleOneLight(Sampler *sampler, Interaction interaction, BSDF *bsdf, Lig
 
 ```c++
 // 这里感觉estimateDirect并不合适，因为这里使用了mis对bsdf进行eval
-// 通常我们应该称这个函数为：NEE (Next event estimate)
+// 通常我们应该称这个函数为：NEE (Next event estimate)，不过pbrt就是这么叫的...
 float3 estimateDirect(Light *light, Sampler *sampler, Interaction &interaction, BSDF *bsdf) const {
     float3 directLighting = float3(0.0f);
     float3 f; // brdf
@@ -863,6 +867,9 @@ float3 estimateDirect(Light *light, Sampler *sampler, Interaction &interaction, 
             if (bsdfPdf != 0.0f && !all(f)) {
                 float weight = powerHeuristic(lightPdf, bsdfPdf);
                 // 这里更直观的写法是：(f*Li/lightPdf) * weight
+                // [ISSUE]: mitsuba中的做法是sampleLight =  f * Li * weight
+                // 所以这里还要除lightPdf到底对不对？
+                // 不过，pbrt-v3的做法就是这样的。
                 directLighting += f * Li * weight / lightPdf;
             }
         }
@@ -870,7 +877,7 @@ float3 estimateDirect(Light *light, Sampler *sampler, Interaction &interaction, 
 
 
     // Sample brdf with multiple importance sampling
-    bsdf->Sample(interaction, sampler);
+    bsdf->Sample(interaction, sampler); // 这里的intersection.wo可以直接作为newRay吧？
     f = bsdf->eval(interaction);
     bsdfPdf = bsdf->pdf(interaction);
     if (bsdfPdf != 0.0f && !all(f)) {
