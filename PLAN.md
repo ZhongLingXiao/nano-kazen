@@ -36,8 +36,9 @@ Demo场景: https://www.youtube.com/watch?v=95sfHIngAYI : 2022.3.1
 
 `Zhong`：
 
-- [ ] texture
+- [ ] volpath: for transmission material
 - [ ] Disney BSDF
+- [ ] texture
 - [ ] normal
 - [ ] 场景搭建
 
