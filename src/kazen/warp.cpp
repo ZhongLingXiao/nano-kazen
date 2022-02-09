@@ -118,30 +118,5 @@ float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
     return INV_PI * Frame::cosTheta(v);
 }
 
-Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
-    auto phi = 2*M_PI*sample.x();
-    auto invAlpha2 = 1.f/alpha; 
-    invAlpha2 *= invAlpha2;
-    auto theta = std::acos(std::sqrt(1/(1-alpha*alpha*std::log(sample.y()))));
-    
-    return Vector3f(
-        std::sin(theta)*std::cos(phi), 
-        std::sin(theta)*std::sin(phi), 
-        std::cos(theta));
-}
-
-float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha) {
-
-    auto cosTheta = Frame::cosTheta(m);
-    auto tanTheta = Frame::tanTheta(m);
-    
-    if(cosTheta <= 0.f)
-        return 0.f;
-    
-    auto azimuthal = 0.5 * INV_PI;
-    auto longitudinal = 2*exp((-tanTheta*tanTheta)/(alpha*alpha))/(alpha*alpha*pow(cosTheta,3));
-    
-    return azimuthal * longitudinal;
-}
 
 NAMESPACE_END(kazen)

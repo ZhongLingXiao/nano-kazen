@@ -54,8 +54,6 @@ public:
   
     virtual Color3f sample(const Mesh *mesh, LightQueryRecord &lRec, Sampler *sampler) const = 0;
 
-    virtual Color3f getRadiance() const = 0;
-
     /**
      * \brief Return the type of object (i.e. Mesh/Light/etc.) 
      * provided by this instance

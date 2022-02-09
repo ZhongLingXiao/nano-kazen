@@ -227,7 +227,6 @@ public:
            
             auto lightPdf = light->pdf(mesh, lRec);
             if (!scene->rayIntersect(lRec.shadowRay)) {
-                auto cosTheta = std::max(0.f, Frame::cosTheta(its.shFrame.toLocal(lRec.wi)));
 
                 /* Query the BSDF for that emitter-sampled direction */
                 BSDFQueryRecord bRec(its.toLocal(-ray.d), its.toLocal(lRec.wi), ESolidAngle);
@@ -238,7 +237,7 @@ public:
                 auto bsdfPdf = its.mesh->getBSDF()->pdf(bRec);
 
                 auto lightWeight = powerHeuristic(lightPdf, bsdfPdf);
-                Li += throughput * Ls * f * cosTheta * lightWeight;
+                Li += throughput * Ls * f  * lightWeight;
             }
 
             /* ----------------------- BSDF sampling ----------------------- */

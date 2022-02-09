@@ -47,9 +47,6 @@ public:
         return 0.f; // if back-facing surface encountered
     }
 
-    Color3f getRadiance() const {
-        return m_radiance;
-    }
 
     std::string toString() const override {
         return "AreaLight[]";

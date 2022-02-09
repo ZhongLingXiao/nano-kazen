@@ -10,10 +10,10 @@ NAMESPACE_BEGIN(kazen)
  * parameters to the evaluation and sampling routines in \ref BSDF
  */
 struct BSDFQueryRecord {
-    /// Incident direction (in the local frame)
+    /// Incident direction (in the local frame): eye or incident ray
     Vector3f wi;
 
-    /// Outgoing direction (in the local frame)
+    /// Outgoing direction (in the local frame): light
     Vector3f wo;
 
     /// Relative refractive index in the sampled direction
