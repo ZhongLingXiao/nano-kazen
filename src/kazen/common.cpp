@@ -46,7 +46,7 @@ NAMESPACE_BEGIN(util)
         int nprocs;
         size_t nprocsSize = sizeof(int);
         if (sysctlbyname("hw.activecpu", &nprocs, &nprocsSize, NULL, 0))
-            Throw("Could not detect the number of processors!");
+            throw("Could not detect the number of processors!");
         __cached_core_count = nprocs;
         return nprocs;
     #else
@@ -365,8 +365,8 @@ Transform Transform::operator*(const Transform &t) const {
 Vector3f sphericalDirection(float theta, float phi) {
     float sinTheta, cosTheta, sinPhi, cosPhi;
 
-    sincosf(theta, &sinTheta, &cosTheta);
-    sincosf(phi, &sinPhi, &cosPhi);
+    math::sincosf(theta, &sinTheta, &cosTheta);
+    math::sincosf(phi, &sinPhi, &cosPhi);
 
     return Vector3f(
         sinTheta * cosPhi,
