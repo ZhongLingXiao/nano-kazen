@@ -66,6 +66,7 @@ add_executable(kazen
     include/kazen/frame.h
     include/kazen/integrator.h
     include/kazen/light.h
+    include/kazen/medium.h
     include/kazen/mesh.h
     include/kazen/object.h
     include/kazen/parser.h
@@ -92,6 +93,7 @@ add_executable(kazen
     src/kazen/common.cpp
     src/kazen/integrator.cpp
     src/kazen/light.cpp
+    src/kazen/medium.cpp
     src/kazen/mesh.cpp
     src/kazen/object.cpp
     src/kazen/parser.cpp
