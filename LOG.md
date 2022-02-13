@@ -960,12 +960,12 @@ inline float powerHeuristic(float fPdf, float gPdf) {
 `2022.2.9`**代码清理，开始完成Q1计划**
 
 - [ ] `volpath`:  medium材质中的Beer-Lambert
-  - [ ] `medium` class
-  - [ ] 根据**bsdf lobe type**来判断是否设置当前介质状态
-  - [ ] 根据是否有介质来进行transmission计算：衰减距离*衰减系数
+  - [x] `medium` class
+  - [x] 根据**bsdf lobe type**来判断是否设置当前介质状态
+  - [x] 根据是否有介质来进行transmission计算：衰减距离*衰减系数
 - [ ] Disney BSDF
   - [ ] `mircofacet` class设计与实现
-  - [ ] **bsdf lobe type**
+  - [x] **bsdf lobe type**
   - [ ] 参考：https://kazenworkspace.slack.com/archives/C02KNMTJNP5/p1642645043001800
   - [ ] 格外注意：**Total Internal Reflection**
 - [ ] texture：
@@ -977,4 +977,49 @@ inline float powerHeuristic(float fPdf, float gPdf) {
 
 
 ------
+
+ 
+
+`2022.2.13`**Q1内容设计【持续迭代】**
+
+```c++
+// 对于media transmission来说(glossy | ideal) 类型对于计算并不重要，我们只需要知道当前是不是折射即可
+// 所以最后将类型简化为反射和折射2种类型即可，具体的type可以放到BSDFType来进行管理
+// BSDFFlag Definition
+enum BSDFFlag {
+    Unset = 0,
+    Reflection = 1 << 0,
+    Transmission = 1 << 1,
+    All = Reflection | Transmission
+};
+
+// BSDFType Definition
+// 这里没用specular的原因是specular=Glossy|Ideal，即高光=光泽|理想镜面
+// 
+enum BSDFType {
+    Unset = 0,
+    Reflection = 1 << 0,
+    Transmission = 1 << 1,
+    Diffuse = 1 << 2,
+    Glossy = 1 << 3,
+    Ideal = 1 << 4,
+    // Composite BSDFType definitions
+    DiffuseReflection = Diffuse | Reflection,
+    DiffuseTransmission = Diffuse | Transmission,
+    GlossyReflection = Glossy | Reflection,
+    GlossyTransmission = Glossy | Transmission,
+    IdealReflection = Ideal | Reflection,
+    IdealTransmission = Ideal | Transmission,
+    All = Diffuse | Glossy | Ideal | Reflection | Transmission
+
+};
+```
+
+- [ ] **BSDF类型思考：如何理解这几种类型？**
+  - [ ] diffuse：漫反射
+  - [ ] specular：相对于diffuse的概念，高光
+  - [ ] glossy | rougness：参数光泽度、粗糙度
+  - [ ] mirror：镜面反射，或者表示为ideal/delta
+
+
 
