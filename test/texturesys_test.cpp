@@ -4,23 +4,31 @@
 #include <OpenImageIO/ustring.h>
 
 int main() {
-    auto texture_system = OIIO::TextureSystem::create(true);
+    // create a texture system
+    auto ts = OIIO::TextureSystem::create(true);
+    int maxfiles = 50;
+    int maxMemoryMB = 1024.0f;
+    ts->attribute ("max_open_files", maxfiles);
+    ts->attribute ("max_memory_MB", maxMemoryMB);
 
+    // load a texture
     OIIO::TextureOpt options;
-    float temp_colour[3] = {0.0f, 0.0f, 0.0f};
-    
     OIIO::ustring filePath("/home/kazen/dev/nano-kazen/build/test/image.png");
     float s = 0.5f;
     float t = 0.5f; 
+    float color[3] = {0.0f, 0.0f, 0.0f};
 
-    texture_system->texture(
+    ts->texture(
         filePath,
         options,
         s, t,
         0, 0, 0, 0,
-        3, &temp_colour[0]);
+        3, &color[0]);
 
-    std::cout << "temp_colour: " << temp_colour[0] << " " << temp_colour[1] << " " << temp_colour[2] << std::endl;
+    std::cout << "[color]: " << color[0] << " " << color[1] << " " << color[2] << std::endl;
+
+    // destroy the texture system
+    OIIO::TextureSystem::destroy(ts);
 
     return 0;
 }
