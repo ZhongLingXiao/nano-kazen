@@ -148,3 +148,7 @@ target_link_libraries(kazen PUBLIC
 
 ## Compile features ##
 target_compile_features(kazen PUBLIC cxx_std_17)
+
+
+## add subdirectory ##
+add_subdirectory(test)
