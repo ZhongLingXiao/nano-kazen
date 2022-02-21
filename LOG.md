@@ -959,7 +959,7 @@ inline float powerHeuristic(float fPdf, float gPdf) {
 
 `2022.2.9`**代码清理，开始完成Q1计划**
 
-- [ ] `volpath`:  medium材质中的Beer-Lambert
+- [x] `volpath`:  medium材质中的Beer-Lambert
   - [x] `medium` class
   - [x] 根据**bsdf lobe type**来判断是否设置当前介质状态
   - [x] 根据是否有介质来进行transmission计算：衰减距离*衰减系数
@@ -968,9 +968,9 @@ inline float powerHeuristic(float fPdf, float gPdf) {
   - [x] **bsdf lobe type**
   - [ ] 参考：https://kazenworkspace.slack.com/archives/C02KNMTJNP5/p1642645043001800
   - [ ] 格外注意：**Total Internal Reflection**
-- [ ] texture：
-  - [ ] filter | type | 等属性
-  - [ ] 还是说使用oiio？
+- [x] texture：
+  - [x] filter | type | 等属性
+  - [x] 还是说使用oiio？
 - [ ] normalMap：accel中的post intersection部分计算shadingFrame
 - [ ] 场景搭建：blender导出脚本
 

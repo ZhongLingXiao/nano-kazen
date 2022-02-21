@@ -18,6 +18,8 @@ Scene::Scene(const PropertyList &) {
 }
 
 Scene::~Scene() {
+    OIIO::TextureSystem::destroy(getTextureSystem());
+
     delete m_accel;
     delete m_sampler;
     delete m_camera;
@@ -42,6 +44,8 @@ void Scene::activate() {
             m_lights.push_back(mesh);
         }
     }
+
+    getTextureSystem();
     // cout << endl;
     // cout << "Configuration: " << toString() << endl;
     // cout << endl;

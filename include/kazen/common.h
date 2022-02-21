@@ -7,11 +7,12 @@
 #include <iostream>
 #include <algorithm>
 #include <stdint.h>
+#include <limits>
 #include <cmath>
 // 3rd
 #include <fmt/core.h>
 #include <Eigen/Core>
-
+#include <OpenImageIO/texture.h>
 // define
 #include <kazen/define.h>
 
@@ -269,6 +270,8 @@ extern Vector3f reflect(const Vector3f &wi, const Vector3f &n);
  * texture files) referenced by a scene being loaded
  */
 extern filesystem::resolver *getFileResolver();
+
+extern OIIO::TextureSystem *getTextureSystem();
 
 template <typename... Args>
 extern void LOG(const char *fmt, const Args &... args) {

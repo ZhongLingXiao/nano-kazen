@@ -5,6 +5,13 @@
 
 NAMESPACE_BEGIN(kazen)
 
+enum BSDFFlag {
+    Unset = 0,
+    Reflection = 1 << 0,
+    Transmission = 1 << 1,
+    All = Reflection | Transmission
+};
+
 /**
  * \brief Convenience data structure used to pass multiple
  * parameters to the evaluation and sampling routines in \ref BSDF
@@ -21,6 +28,9 @@ struct BSDFQueryRecord {
 
     /// Measure associated with the sample
     EMeasure measure;
+
+    /// Flags associated with the sample
+    BSDFFlag flag;
 
     /// UV value for evaluate textures
     Point2f uv;

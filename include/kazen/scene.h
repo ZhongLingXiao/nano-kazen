@@ -54,6 +54,11 @@ public:
 
     const std::vector<Mesh *> &getLights() const { return m_lights; }
 
+    size_t getNumLights() const { return m_lights.size(); }
+
+    /// Return background color
+    const Color3f getBackgroundColor() const { return m_backgroundColor; }
+
     /**
      * \brief Intersect a ray against all triangles stored in the scene
      * and return detailed intersection information
@@ -119,6 +124,7 @@ private:
     Sampler *m_sampler = nullptr;
     Camera *m_camera = nullptr;
     Accel *m_accel = nullptr;
+    Color3f m_backgroundColor = Color3f(0.f);
 };
 
 NAMESPACE_END(kazen)

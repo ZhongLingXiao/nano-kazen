@@ -67,5 +67,29 @@ private:
 };
 
 
+// class OIIOTexture : public Texture<Color3f> {
+// public:
+//     OIIOTexture(const PropertyList &props) {
+        
+//     }
+
+//     Color3f eval(const Point2f &uv, bool linear=true) const override {    
+//         return Color3f(0.f);
+//     } 
+
+//     std::string toString() const {
+//         return fmt::format(
+//                 "OIIOTexture[  \n"
+//                 "  m_filePath = {}},\n"
+//                 "]",
+//                 m_fileName
+//         );
+//     }
+
+// private:
+//     std::string m_fileName;
+// };
+
 KAZEN_REGISTER_CLASS(ImageTexture, "image");
+// KAZEN_REGISTER_CLASS(OIIOTexture, "oiio");
 NAMESPACE_END(kazen)
