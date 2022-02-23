@@ -2,6 +2,8 @@
 #include <kazen/frame.h>
 #include <kazen/warp.h>
 #include <kazen/texture.h>
+#include <kazen/mircofacet.h>
+#include <Eigen/Geometry> // cross()
 #include <OpenImageIO/texture.h>
 #include <OpenImageIO/ustring.h>
 #include <filesystem/resolver.h>
@@ -286,8 +288,43 @@ private:
 };
 
 
+class GGX : public BSDF {
+public:
+    GGX(const PropertyList &propList) { 
+        m_albedo = propList.getColor("albedo", Color3f(0.5f));
+        m_roughness = propList.getFloat("roughness", 0.5f);
+        m_anisotropy = propList.getFloat("anisotropy", 0.f);
+    }
+
+    Color3f eval(const BSDFQueryRecord &bRec) const {
+        Color3f F;
+        return evaluateGGXSmithBRDF(bRec.wi, bRec.wo, m_albedo, m_roughness, m_anisotropy, F);
+    }
+
+    float pdf(const BSDFQueryRecord &bRec) const {
+        Vector3f H = (bRec.wi + bRec.wo).normalized();
+        Vector2f alpha = roughnessToAlpha(m_roughness, m_anisotropy);
+        return computeGGXSmithPDF(bRec.wi, H, alpha);
+    }
+
+    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
+        return sampleGGXSmithBRDF(bRec.wi, m_albedo, m_roughness, m_anisotropy, sample, bRec.wo, bRec.pdf);
+    }
+
+    std::string toString() const {
+        return "GGX[]";
+    }
+
+private:
+    Color3f m_albedo;
+    float m_roughness;
+    float m_anisotropy;
+};
+
+
 KAZEN_REGISTER_CLASS(Diffuse, "diffuse");
 KAZEN_REGISTER_CLASS(Dielectric, "dielectric");
 KAZEN_REGISTER_CLASS(Mirror, "mirror");
 KAZEN_REGISTER_CLASS(Lambertian, "lambertian");
+KAZEN_REGISTER_CLASS(GGX, "ggx");
 NAMESPACE_END(kazen)

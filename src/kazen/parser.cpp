@@ -9,28 +9,6 @@ NAMESPACE_BEGIN(kazen)
 
 Object *loadFromXML(const std::string &filename) {
 
-    // /// Remove this: temp test code
-    // pugi::xml_document doc;
-    // pugi::xml_parse_result result = doc.load_file(filename.c_str());
-
-    // if (!result)
-    //     std::cout << "shit happens\n";
-
-    // pugi::xml_node scene = doc.child("scene");
-    //  std::cout << scene.name() << std::endl;
-    // for (pugi::xml_node_iterator it = scene.begin(); it != scene.end(); ++it) {
-    //     auto str = fmt::format("{}", string::indent(it->name(), 4));
-    //     std::cout << str << std::endl;
-        
-    //     for (pugi::xml_attribute_iterator ait = it->attributes_begin(); ait != it->attributes_end(); ++ait) {
-    //         std::cout << " : " << ait->name() << "=" << ait->value();
-    //     }
-
-    //     std::cout << std::endl;
-    // }
-
-    // return nullptr;
-
     /* Load the XML file using 'pugi' (a tiny self-contained XML parser implemented in C++) */
     pugi::xml_document doc;
     pugi::xml_parse_result result = doc.load_file(filename.c_str());

@@ -50,8 +50,8 @@ elseif(MSVC)
 endif()
 
 
-## Add executable ##
-add_executable(kazen 
+## set sources ##
+set( KAZEN_SOURCES
     # headers
     include/kazen/accel.h
     include/kazen/bbox.h
@@ -83,7 +83,7 @@ add_executable(kazen
     include/kazen/transform.h
     include/kazen/vector.h
     include/kazen/warp.h
-
+  
     # source code
     src/kazen/accel.cpp
     src/kazen/bitmap.cpp
@@ -105,11 +105,13 @@ add_executable(kazen
     src/kazen/scene.cpp
     src/kazen/texture.cpp
     src/kazen/warp.cpp
+)
 
-    # experimental code
+## kazen ##
 
-    # tests
-
+## Add executable ##
+add_executable(kazen 
+    ${KAZEN_SOURCES}
     # main.cpp
     src/kazen/main.cpp
 )
@@ -148,6 +150,51 @@ target_link_libraries(kazen PUBLIC
 
 ## Compile features ##
 target_compile_features(kazen PUBLIC cxx_std_17)
+
+
+## test kazen ##
+
+## Add executable ##
+add_executable(test_kazen 
+    ${KAZEN_SOURCES}
+    # main.cpp
+    src/kazen/test.cpp
+)
+
+
+## Header only ext ##
+target_include_directories(test_kazen PUBLIC
+    ## kazen include files ##
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    
+    ## eigen3 ##
+    $ENV{REZ_EIGEN_ROOT}
+    
+    ## tinyobjloader ##
+    $ENV{REZ_TINYOBJLOADER_ROOT}    
+
+    ## tbb ##
+    $ENV{REZ_TBB_ROOT}/include
+
+    ## filesystem ##
+    $ENV{REZ_FILESYSTEM_ROOT}
+
+)
+
+
+## Link against target ##
+target_link_libraries(test_kazen PUBLIC
+    # Boost::filesystem
+    TBB::tbb
+    OpenImageIO::OpenImageIO
+    embree
+    fmt::fmt
+    pugixml::pugixml
+)
+
+
+## Compile features ##
+target_compile_features(test_kazen PUBLIC cxx_std_17)
 
 
 ## add subdirectory ##

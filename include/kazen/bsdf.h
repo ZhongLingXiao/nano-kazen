@@ -32,6 +32,9 @@ struct BSDFQueryRecord {
     /// Flags associated with the sample
     BSDFFlag flag;
 
+    /// pdf associated with the sample
+    float pdf;
+
     /// UV value for evaluate textures
     Point2f uv;
 

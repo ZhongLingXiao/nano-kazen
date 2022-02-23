@@ -959,9 +959,9 @@ inline float powerHeuristic(float fPdf, float gPdf) {
 
 `2022.2.9`**代码清理，开始完成Q1计划**
 
-- [x] `volpath`:  medium材质中的Beer-Lambert
+- [ ] `volpath`:  medium材质中的Beer-Lambert
   - [x] `medium` class
-  - [x] 根据**bsdf lobe type**来判断是否设置当前介质状态
+  - [ ] 根据**bsdf lobe type**来判断是否设置当前介质状态
   - [x] 根据是否有介质来进行transmission计算：衰减距离*衰减系数
 - [ ] Disney BSDF
   - [ ] `mircofacet` class设计与实现
