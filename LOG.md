@@ -240,7 +240,7 @@ class MeshNode: Node {
 
 ```
 
-**NaN错误原因 ：rr的时候用小于号判断p和random的关系[[a011053]](https://github.com/ZhongLingXiao/nano-kazen/commit/a011053750eaab07837fff622c6d95e8be6b3b66)**
+**NaN错误原因 ：rr的时候用小于号判断p和random的关系：[`445e255`NAN issue fix and path_mats integrator](https://github.com/ZhongLingXiao/nano-kazen/commit/445e255b54bf93fb10c51d36a898b2092f9e7006)**
 
 ```
 if (depth >= 3) {
