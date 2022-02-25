@@ -232,13 +232,32 @@ class MeshNode: Node {
 // 4. 对于rfilter: mitchell会出现光源周围出现黑边(估计是默认参数设置太小)，暂时使用gaussian
 // 
 // 遗留问题
-// 1. 出现Integrator: computed an invalid radiance value: [-nan, -nan, -nan]
+// 1. 【解决】出现Integrator: computed an invalid radiance value: [-nan, -nan, -nan]
 //    目前猜测是斜掠角导致的除0的问题
 // 2. 【解决】area light 的pdf和sample函数还有疑问，distance2到底应该放到哪里？ 
 // 3. 【解决】mis过程重新梳理 (之前一直错误的原因是pdf被重复计算，现在pdf函数被隔离出来)
 
 
 ```
+
+**NaN错误原因 ：rr的时候用小于号判断p和random的关系[[a011053]](https://github.com/ZhongLingXiao/nano-kazen/commit/a011053750eaab07837fff622c6d95e8be6b3b66)**
+
+```
+if (depth >= 3) {
+    // continuation probability
+    auto probability = std::min(throughput.maxCoeff()*eta*eta, 0.95f);
+    if (probability <= sampler->next1D())
+        break;
+
+    throughput /= probability;
+}
+```
+
+这里` probability <= sampler->next1D()` 一定要小于或等于` <= `因为此时可能出现 `probability == 0 && sampler->next1D() == 0`
+这时候如果只是` < ` 的话if 判断不成立执行`throughput /= probability;`
+然后就会出现0/0 = NaN这种情况了**结论：rr的时候一定要用**` **<=** ` **来进行判断**
+
+
 
 ------
 
@@ -959,9 +978,9 @@ inline float powerHeuristic(float fPdf, float gPdf) {
 
 `2022.2.9`**代码清理，开始完成Q1计划**
 
-- [ ] `volpath`:  medium材质中的Beer-Lambert
+- [x] `volpath`:  medium材质中的Beer-Lambert
   - [x] `medium` class
-  - [ ] 根据**bsdf lobe type**来判断是否设置当前介质状态
+  - [x] 根据**bsdf lobe type**来判断是否设置当前介质状态
   - [x] 根据是否有介质来进行transmission计算：衰减距离*衰减系数
 - [ ] Disney BSDF
   - [ ] `mircofacet` class设计与实现
