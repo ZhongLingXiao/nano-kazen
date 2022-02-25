@@ -279,5 +279,9 @@ extern void LOG(const char *fmt, const Args &... args) {
     std::cout << "[" << util::currentTime() << "][INFO]: " << fmt::format(fmt, args...) << std::endl;
 }
 
+inline float sqr(float x) {
+    return x * x;
+}
+
 NAMESPACE_END(kazen)
 

@@ -12,11 +12,6 @@ NAMESPACE_BEGIN(kazen)
 // - 2014: Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs.
 // - 2018: Sampling the GGX Distribution of Visible Normals.
 
-
-float sqr(float x) {
-    return x * x;
-}
-
 Color3f lerp(Color3f t, const float c1, const float c2) {
     return t * c1 + (1.f - t) * c2;
 }
@@ -31,7 +26,7 @@ Color3f evaluateSchlickFresnel(Color3f f0, float cosTheta) {
 // NOTE: See "Revisiting Physically Based Shading at Imageworks" from SIGGRAPH 2017.
 Vector2f roughnessToAlpha(float roughness, float anisotropy) {
     // Specify a minimum alpha value, as the GGX NDF does not support a zero alpha.
-    static const float MIN_ALPHA = 0.0001f;
+    static const float MIN_ALPHA = 0.001f;
 
     // Square the roughness value and combine with anisotropy to produce X and Y alpha values.
     float alpha = std::max(MIN_ALPHA, sqr(roughness));

@@ -297,18 +297,31 @@ public:
     }
 
     Color3f eval(const BSDFQueryRecord &bRec) const {
+        if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
+            return Color3f(0.0f);        
         Color3f F;
-        return evaluateGGXSmithBRDF(bRec.wi, bRec.wo, m_albedo, m_roughness, m_anisotropy, F);
+        return evaluateGGXSmithBRDF(bRec.wi, bRec.wo, m_albedo, m_roughness, m_anisotropy, F) * Frame::cosTheta(bRec.wo);
     }
 
     float pdf(const BSDFQueryRecord &bRec) const {
-        Vector3f H = (bRec.wi + bRec.wo).normalized();
-        Vector2f alpha = roughnessToAlpha(m_roughness, m_anisotropy);
-        return computeGGXSmithPDF(bRec.wi, H, alpha);
+        if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0) 
+            return 0.0f;
+        
+        auto H = (bRec.wi + bRec.wo).normalized();
+        auto alpha = roughnessToAlpha(m_roughness, m_anisotropy);
+        auto denom = 4.0f * bRec.wi.dot(H);
+        return computeGGXSmithPDF(bRec.wi, H, alpha) / denom;
     }
 
     Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
-        return sampleGGXSmithBRDF(bRec.wi, m_albedo, m_roughness, m_anisotropy, sample, bRec.wo, bRec.pdf);
+        if (Frame::cosTheta(bRec.wi) <= 0)
+            return Color3f(0.0f);
+        Color3f color = sampleGGXSmithBRDF(bRec.wi, m_albedo, m_roughness, m_anisotropy, sample, bRec.wo, bRec.pdf);
+        if (Frame::cosTheta(bRec.wo) <= 0)
+            return Color3f(0.0f);
+
+        return color * Frame::cosTheta(bRec.wo) / bRec.pdf;
+
     }
 
     std::string toString() const {

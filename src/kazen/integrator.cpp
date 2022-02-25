@@ -32,48 +32,6 @@ public:
     }
 };
 
-
-/// simple
-class SimpleIntegrator : public Integrator {
-public:
-    SimpleIntegrator(const PropertyList &props) {
-        m_position = props.getPoint("position");
-        m_energy = props.getColor("energy");
-    }
-
-    Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &ray) const {
-        /* Find the surface that is visible in the requested direction */
-        Intersection its;
-        if (!scene->rayIntersect(ray, its)) {
-            return Color3f(0.f);
-        }
-
-        auto hitPos = its.p;
-        Vector3f wo = m_position - hitPos;
-        auto distance = wo.dot(wo);
-        wo.normalize();
-        
-        auto albedo = m_energy / (4 * M_PI * M_PI);
-        Ray3f shadowRay = Ray3f(hitPos, wo);
-        auto cosTheta = std::max(0.f, its.shFrame.cosTheta(its.shFrame.toLocal(wo)));
-        
-        if(!scene->rayIntersect(shadowRay)) {
-            return albedo * cosTheta / distance;
-        }
-        
-        return Color3f(0.f);
-    }
-
-    std::string toString() const {
-        return "SimpleIntegrator[]";
-    }
-
-private:
-    Point3f m_position; 
-    Color3f m_energy;  
-};
-
-
 /// ao
 class AmbientOcclusionIntegrator : public Integrator {
 public:
@@ -417,7 +375,7 @@ public:
             if (bounce > 3) {
                 // continuation probability(p)
                 auto p = std::min(throughput.maxCoeff()*eta*eta, 0.95f);
-                if (p < sampler->next1D()) {
+                if (p <= sampler->next1D()) {
                     break;
                 }
                 throughput /= p;
@@ -531,7 +489,6 @@ private:
 
 
 KAZEN_REGISTER_CLASS(NormalIntegrator, "normals");
-KAZEN_REGISTER_CLASS(SimpleIntegrator, "simple");
 KAZEN_REGISTER_CLASS(AmbientOcclusionIntegrator, "ao");
 KAZEN_REGISTER_CLASS(WhittedIntegrator, "whitted");
 KAZEN_REGISTER_CLASS(PathMatsIntegrator, "path_mats");
