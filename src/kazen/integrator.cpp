@@ -175,6 +175,53 @@ public:
 };
 
 
+class PathMatsIntegrator : public Integrator {
+public:
+    PathMatsIntegrator(const PropertyList &props) {}
+
+    Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &ray) const override {
+        Color3f color = 0;
+        Color3f t = 1;
+        Ray3f rayRecursive = ray;
+        float probability;
+
+        while (true) {
+            Intersection its;
+            if (!scene->rayIntersect(rayRecursive, its))
+                return color;
+
+            //contribute emitted
+            if (its.mesh->isLight()) {
+                LightQueryRecord lRecE(rayRecursive.o, its.p, its.shFrame.n);
+                color += t * its.mesh->getLight()->eval(lRecE);
+            }
+
+            //Russian roulettio
+            probability = std::min(t.x(), 0.95f);
+            if (sampler->next1D() >= probability)
+                return color;
+
+            t /= probability;
+
+            //BSDF
+            BSDFQueryRecord bRec(its.shFrame.toLocal(-rayRecursive.d));
+            bRec.uv = its.uv;
+            Color3f f = its.mesh->getBSDF()->sample(bRec, sampler->next2D());
+            t *= f;
+
+           //continue recursion
+           rayRecursive = Ray3f(its.p, its.toWorld(bRec.wo));
+        }
+
+        return color;
+    }
+
+    std::string toString() const {
+        return "PathMatsIntegrator[]";
+    }
+};
+
+
 // Next Event Estimation(NEE) with multiple importance sampling(MIS)
 class PathMisIntegrator : public Integrator {
 public:
@@ -213,7 +260,7 @@ public:
             if (depth >= 3) {
                 // continuation probability
                 auto probability = std::min(throughput.maxCoeff()*eta*eta, 0.99f);
-                if (probability < sampler->next1D()) {
+                if (probability <= sampler->next1D()) {
                     break;
                 }
                 throughput /= probability;
@@ -487,6 +534,7 @@ KAZEN_REGISTER_CLASS(NormalIntegrator, "normals");
 KAZEN_REGISTER_CLASS(SimpleIntegrator, "simple");
 KAZEN_REGISTER_CLASS(AmbientOcclusionIntegrator, "ao");
 KAZEN_REGISTER_CLASS(WhittedIntegrator, "whitted");
+KAZEN_REGISTER_CLASS(PathMatsIntegrator, "path_mats");
 KAZEN_REGISTER_CLASS(PathMisIntegrator, "path_mis");
 KAZEN_REGISTER_CLASS(VolPathIntegrator, "path_vol");
 NAMESPACE_END(kazen)
