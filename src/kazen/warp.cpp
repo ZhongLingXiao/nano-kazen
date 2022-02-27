@@ -118,5 +118,15 @@ float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
     return INV_PI * Frame::cosTheta(v);
 }
 
+Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
+    float phi = 2*M_PI*sample.x();
+    float theta = atan(alpha*sqrt(log(1/(1-sample.y()))));
+    return Vector3f(sin(theta)*cos(phi),sin(theta)*sin(phi),cos(theta));
+}
+
+float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha) {
+    float theta = acos(m.z()/m.norm());
+    return (abs(m.norm() - 1) < Epsilon && m.z() >= 0) * exp(-pow(tan(theta),2)/(alpha*alpha))/(M_PI*alpha*alpha*pow(cos(theta),3));
+}
 
 NAMESPACE_END(kazen)

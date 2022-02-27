@@ -164,7 +164,7 @@ Color3f sampleGGXSmithBRDF(Vector3f V, Color3f f0, float roughness, float anisot
     H           = flip ? -H : H;
 
     // Reflect the view direction across the microfacet normal to get the sample direction.
-    L = reflect(-V, H);
+    L = reflect(V, H);
 
     // Compute the PDF, divided by a factor from using a reflected vector. See 2018 equation #17.
     // NOTE: 2018 equation #19 shows that a number of terms can be cancelled out to produce a simple
