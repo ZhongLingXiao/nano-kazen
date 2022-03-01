@@ -1042,3 +1042,16 @@ enum BSDFType {
 
 
 
+------
+
+
+
+`2022.3.1`**优先级重排**
+
+1. normal 法线贴图，最出效果，方便 demo
+2. uv mapping，可以 rotate | scale uv
+3. rough dielectric
+4. Mircofacet | Fresnel 类重构
+5. Texture 类重构，oiio texturesys 设计更加合理
+6. volpath 积分器
+
