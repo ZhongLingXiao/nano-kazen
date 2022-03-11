@@ -1048,10 +1048,73 @@ enum BSDFType {
 
 `2022.3.1`**优先级重排**
 
-1. normal 法线贴图，最出效果，方便 demo
-2. uv mapping，可以 rotate | scale uv
-3. rough dielectric
-4. Mircofacet | Fresnel 类重构
-5. Texture 类重构，oiio texturesys 设计更加合理
-6. volpath 积分器
+- [ ] normal 法线贴图，最出效果，方便 demo
+- [ ] disney brdf
+- [ ] rough dielectric
+- [ ] Mircofacet | Fresnel 类重构
+- [ ] Texture 类重构，oiio texturesys 设计更加合理
+- [ ] uv mapping，可以 rotate | scale uv 
+- [ ] volpath 积分器
 
+
+
+------
+
+
+
+`2022.3.11`**normal map 的思考与问题**
+
+1. **计算切线空间**
+
+```c++
+// 这里 dpdu 可以理解为 tangent, dpdv 可以理解为binormal
+// 
+
+Vector3f dP1=p1-p0, dP2=p2-p0;
+Point2f dUV1=uv1-uv0, dUV2=uv2-uv0;
+Normal3f n = dP1.cross(dP2).normalized();
+
+float determinant = dUV1.x()*dUV2.y() - dUV1.y()*dUV2.x();
+if (determinant == 0) {
+	coordinateSystem(n.normalized(), its.dpdu, its.dpdv);
+}
+else {
+    float invDet = 1.0f / determinant;
+    its.dpdu = ( dUV2.y() * dP1 - dUV1.y() * dP2) * invDet;
+    its.dpdv = (-dUV2.x() * dP1 + dUV1.x() * dP2) * invDet;    
+}
+```
+
+2. **normal map 扰动法线计算**
+
+```c++
+Frame getFrame(const Intersection &its, Vector3f wi) const {
+	Color3f rgb = m_normalMap->eval(its.uv, false);
+	Vector3f localNormal(2 * rgb.r() - 1, 2 * rgb.g() - 1, 2 * rgb.b() - 1);
+
+	Frame result;
+    result.n = its.shFrame.toWorld(localNormal).normalized();
+    result.s = (its.dpdu - result.n * result.n.dot(its.dpdu)).normalized();
+    result.t = result.n.cross(result.s).normalized();       
+
+    return result;
+}
+```
+
+> **问题**
+>
+> 法线扰动可能使得法线方向 n 与如何光线方向 wi 的夹角大于90°。然后导致整体变黑，目前没有一致性的解决方案，cycles 和 Arnold 渲染器有不同的方法。
+>
+> cycles 效果稍好
+
+
+
+1.  [高度图，视差贴图(Bump-maps)，置换贴图(displacement)，法线贴图的本质](https://zhuanlan.zhihu.com/p/266434175)
+2.  [在使用光线追踪类算法时应该如何处理normal mapping等技术造成的artifacts？](https://www.zhihu.com/question/316029127)
+3.  [通过基于微表面阴影函数的方案解决Bump Map阴影失真问题](https://zhuanlan.zhihu.com/p/63419999)
+
+
+
+[Microfacet-based Normal Mapping for Robust Monte Carlo Path Tracing](https://jo.dreggn.org/home/2017_normalmap.pdf ) **这个效果测下来效果不对，有颜色断层，需要进一步验证**
+
+总之目前效果非常拉跨，需要重新考虑 normal map 是否进入Q1 demo。
