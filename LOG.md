@@ -1112,9 +1112,29 @@ Frame getFrame(const Intersection &its, Vector3f wi) const {
 1.  [高度图，视差贴图(Bump-maps)，置换贴图(displacement)，法线贴图的本质](https://zhuanlan.zhihu.com/p/266434175)
 2.  [在使用光线追踪类算法时应该如何处理normal mapping等技术造成的artifacts？](https://www.zhihu.com/question/316029127)
 3.  [通过基于微表面阴影函数的方案解决Bump Map阴影失真问题](https://zhuanlan.zhihu.com/p/63419999)
+4. [Math for Game Developers - Normal Maps](https://www.youtube.com/watch?v=SZBkSYelJcg)
 
 
 
-[Microfacet-based Normal Mapping for Robust Monte Carlo Path Tracing](https://jo.dreggn.org/home/2017_normalmap.pdf ) **这个效果测下来效果不对，有颜色断层，需要进一步验证**
+[Microfacet-based Normal Mapping for Robust Monte Carlo Path Tracing](https://jo.dreggn.org/home/2017_normalmap.pdf ) 
 
-总之目前效果非常拉跨，需要重新考虑 normal map 是否进入Q1 demo。
+1. **NormalMircofacetDefault 方法没跑通**
+2. **(normal flip  及 normal switch 这两种工业界常用方法)，有颜色断层，需要进一步验证**
+
+
+
+> 最后采用的方法就是最 naive 的实现，即：上述 `getFrame()` 方法。
+
+
+
+------
+
+
+
+`2022.3.13`**normal map 类型整理 **
+
+1. 采用最 naive 的normal map 实现
+2. 实现了 `NormalMap BSDF` 类型，嵌套 `BSDF` 对象
+
+
+

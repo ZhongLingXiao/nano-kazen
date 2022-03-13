@@ -2,6 +2,7 @@
 
 #include <kazen/object.h>
 #include <kazen/texture.h>
+#include <kazen/mesh.h>
 
 NAMESPACE_BEGIN(kazen)
 
@@ -17,6 +18,9 @@ enum BSDFFlag {
  * parameters to the evaluation and sampling routines in \ref BSDF
  */
 struct BSDFQueryRecord {
+    /// shading frame
+    Intersection its;
+
     /// Incident direction (in the local frame): eye or incident ray
     Vector3f wi;
 
@@ -110,8 +114,6 @@ public:
      */
     virtual bool isDiffuse() const { return false; }
 
-    /// Get normal map
-    virtual Texture<Color3f>* getNormalMap() const { return nullptr; }
 };
 
 NAMESPACE_END(kazen)

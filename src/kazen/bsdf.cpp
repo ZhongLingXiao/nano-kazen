@@ -1,8 +1,10 @@
 #include <kazen/bsdf.h>
+#include <kazen/mesh.h>
 #include <kazen/frame.h>
 #include <kazen/warp.h>
 #include <kazen/texture.h>
 #include <kazen/mircofacet.h>
+#include <kazen/proplist.h>
 #include <Eigen/Geometry> // cross()
 #include <OpenImageIO/texture.h>
 #include <OpenImageIO/ustring.h>
@@ -40,7 +42,7 @@ public:
         if (bRec.measure != ESolidAngle
             || Frame::cosTheta(bRec.wi) <= 0
             || Frame::cosTheta(bRec.wo) <= 0)
-            return 1.0f;
+            return 0.0f;
 
 
         /* Importance sampling density wrt. solid angles:
@@ -192,100 +194,342 @@ public:
 };
 
 
-/**
- * \brief Diffuse / Lambertian BRDF model
- */
-class Lambertian : public BSDF {
+/// normal map (normal switch)
+class NormalMap : public BSDF {
 public:
-    Lambertian(const PropertyList &propList) {
-        auto fileName = propList.getString("albedo");
-        filesystem::path filePath = getFileResolver()->resolve(fileName);
-        m_albedo = OIIO::ustring(filePath.str());
+    NormalMap(const PropertyList &propList) { }
+
+    ~NormalMap() {
+        if(!m_normalMap) delete m_normalMap;
+        if(!m_nested) delete m_nested;
     }
 
-    /// Evaluate the BRDF model
-    Color3f eval(const BSDFQueryRecord &bRec) const {
-        /* This is a smooth BRDF -- return zero if the measure
-           is wrong, or when queried for illumination on the backside */
-        if (bRec.measure != ESolidAngle
-            || Frame::cosTheta(bRec.wi) <= 0
-            || Frame::cosTheta(bRec.wo) <= 0)
-            return Color3f(0.0f);
+    Color3f eval(const BSDFQueryRecord &bRec) const override {
+        const Intersection &its = bRec.its;
+        Color3f rgb = m_normalMap->eval(its.uv);
+        Vector3f n(2*rgb.r()-1, 2*rgb.g()-1, 2*rgb.b()-1);
 
-        /* The BRDF is simply the albedo / pi */
-        OIIO::TextureOpt options;
-        float color[3] = {1.0f, 1.0f, 1.0f};
-        getTextureSystem()->texture(
-            m_albedo,
-            options,
-            bRec.uv.x(), bRec.uv.y(),
-            0, 0, 0, 0,
-            3, &color[0]);  
-        return Color3f(color[0], color[1], color[2]).toLinearRGB() * INV_PI * Frame::cosTheta(bRec.wo);
+		if (Frame::cosTheta(bRec.wi) > 0 && Frame::cosTheta(bRec.wo) > 0 && n.dot(bRec.wi) <= 0)
+            return m_nested->eval(bRec);
+
+        Intersection perturbed(its);
+        perturbed.shFrame = getFrame(its, n.normalized(), bRec.wi);
+        
+        BSDFQueryRecord perturbedQuery(
+            perturbed.toLocal(its.toWorld(bRec.wi)),
+            perturbed.toLocal(its.toWorld(bRec.wo)), bRec.measure);
+        
+		if (Frame::cosTheta(bRec.wo) * Frame::cosTheta(perturbedQuery.wo) <= 0)
+			return Color3f(0.0f);
+
+        return m_nested->eval(perturbedQuery);
     }
 
-    /// Compute the density of \ref sample() wrt. solid angles
-    float pdf(const BSDFQueryRecord &bRec) const {
-        /* This is a smooth BRDF -- return zero if the measure
-           is wrong, or when queried for illumination on the backside */
-        if (bRec.measure != ESolidAngle
-            || Frame::cosTheta(bRec.wi) <= 0
-            || Frame::cosTheta(bRec.wo) <= 0)
-            return 1.0f;
+    float pdf(const BSDFQueryRecord &bRec) const override {
+        const Intersection &its = bRec.its;
+        Color3f rgb = m_normalMap->eval(its.uv);
+        Vector3f n(2*rgb.r()-1, 2*rgb.g()-1, 2*rgb.b()-1);
 
+		if (Frame::cosTheta(bRec.wi) > 0 && Frame::cosTheta(bRec.wo) > 0 && n.dot(bRec.wi) <= 0)
+            return m_nested->pdf(bRec); 
 
-        /* Importance sampling density wrt. solid angles:
-           cos(theta) / pi.
+        Intersection perturbed(its);
+        perturbed.shFrame = getFrame(its, n.normalized(), bRec.wi);
+        
+        BSDFQueryRecord perturbedQuery(
+            perturbed.toLocal(its.toWorld(bRec.wi)),
+            perturbed.toLocal(its.toWorld(bRec.wo)), bRec.measure);
+        
+		if (Frame::cosTheta(bRec.wo) * Frame::cosTheta(perturbedQuery.wo) <= 0)
+			return 0.0f;
 
-           Note that the directions in 'bRec' are in local coordinates,
-           so Frame::cosTheta() actually just returns the 'z' component.
-        */
-        return INV_PI * Frame::cosTheta(bRec.wo);
+        return m_nested->pdf(perturbedQuery);        
     }
 
-    /// Draw a a sample from the BRDF model
-    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
-        if (Frame::cosTheta(bRec.wi) <= 0)
-            return Color3f(0.0f);
+    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const override {
+        const Intersection &its = bRec.its;
+        Color3f rgb = m_normalMap->eval(its.uv);
+        Vector3f n(2*rgb.r()-1, 2*rgb.g()-1, 2*rgb.b()-1);
+    
+		if (Frame::cosTheta(bRec.wi) > 0 && n.dot(bRec.wi) <= 0) {
+			bRec.eta = 1.0f;
+			return m_nested->sample(bRec, sample);
+		}
 
-        bRec.measure = ESolidAngle;
+		Intersection perturbed(its);
+		perturbed.shFrame = getFrame(its, n.normalized(), bRec.wi);
 
-        /* Warp a uniformly distributed sample on [0,1]^2
-           to a direction on a cosine-weighted hemisphere */
-        bRec.wo = Warp::squareToCosineHemisphere(sample);
-
-        /* Relative index of refraction: no change */
-        bRec.eta = 1.0f;
-
-        /* eval() / pdf() * cos(theta) = albedo. There
-           is no need to call these functions. */
-        OIIO::TextureOpt options;
-        float color[3] = {1.0f, 1.0f, 1.0f};
-        getTextureSystem()->texture(
-            m_albedo,
-            options,
-            bRec.uv.x(), bRec.uv.y(),
-            0, 0, 0, 0,
-            3, &color[0]);  
-        return Color3f(color[0], color[1], color[2]).toLinearRGB();
+        BSDFQueryRecord perturbedQuery(perturbed.toLocal(its.toWorld(bRec.wi)));
+        Color3f result = m_nested->sample(perturbedQuery, sample);
+        if (!result.isZero()) {
+            bRec.wo = its.toLocal(perturbed.toWorld(perturbedQuery.wo));
+			bRec.eta = perturbedQuery.eta;
+			if (Frame::cosTheta(bRec.wo) * Frame::cosTheta(perturbedQuery.wo) <= 0)
+				return Color3f(0.0f);
+        }
+        return result;
     }
 
-    bool isDiffuse() const {
-        return true;
+    // https://arxiv.org/abs/1705.01263
+    Frame getFrame(const Intersection &its, Vector3f n, Vector3f wi) const {
+
+        // 1. Naive implementation
+        Frame result;
+        result.n = its.shFrame.toWorld(n).normalized();
+        result.s = (its.dpdu - result.n * result.n.dot(its.dpdu)).normalized();
+        result.t = result.n.cross(result.s).normalized();       
+
+        return result;
+
+        // 2. Normalmap switch (Iray way)
+        // Frame result;
+		// Vector3f r = 2.0f * n.dot(wi) * n - wi;
+		// if (Frame::cosTheta(r) <= 0) {
+		// 	// pull up normal (see p. 46 https://arxiv.org/abs/1705.01263)
+		// 	r = (r - r.dot(wi) * 1.01f * wi).normalized();
+		// 	n = (wi + r).normalized();
+		// }
+
+		// Frame frame = its.shFrame;
+		// result.n = frame.toWorld(n).normalized();
+		// result.s = (its.dpdu - result.n * result.n.dot(its.dpdu)).normalized();
+		// result.t = result.n.cross(result.s).normalized();
+
+		// return result;
     }
 
-    /// Return a human-readable summary
-    std::string toString() const {
-        return fmt::format(
-            "Lambertian[\n"
-            "  albedo = {}\n"
-            "]", m_albedo.string());
+    void addChild(Object *obj) override {
+        switch (obj->getClassType()) {
+            case ETexture:
+                m_normalMap = static_cast<Texture<Color3f>*>(obj);
+                break;
+            case EBSDF:
+                m_nested = static_cast<BSDF*>(obj);
+                break;
+            default:
+                throw Exception("addChild is not supported other than normal maps and nested BSDF");
+        }
     }
 
     EClassType getClassType() const { return EBSDF; }
+
+    std::string toString() const {
+        return fmt::format("NormalMap[]");
+    }    
+
 private:
-    OIIO::ustring m_albedo;
+    Texture<Color3f>* m_normalMap=nullptr;
+    BSDF* m_nested = nullptr;
 };
+
+
+// // Eric Heitz's 2017 - Microfacet-based Normal Mapping for Robust Monte Carlo Path Tracing
+// class NormalMapMicrofacet : public BSDF {
+// public:
+//     NormalMapMicrofacet(const PropertyList &propList) {
+//         m_albedo = propList.getColor("albedo", Color3f(0.5f));
+
+//     }
+
+//     ~NormalMapMicrofacet() {
+//         if(!m_normalMap) delete m_normalMap;
+//         if(!m_nested) delete m_nested;
+//     }
+
+//     static float pdot(Vector3f a, Vector3f b) {
+//         return std::max(0.f, a.dot(b));
+//     }
+
+//     static Vector3f wt(Vector3f wp) {
+//         return Vector3f(-wp.x(), -wp.y(), 0.f).normalized();
+//     }
+
+//     static float G1(Vector3f wp, Vector3f w) {
+//         return std::min(1.f, std::max(0.f, Frame::cosTheta(w)) * std::max(0.f, Frame::cosTheta(wp))
+//             / (pdot(w, wp) + pdot(w, wt(wp)) * Frame::sinTheta(wp))
+//         );
+//     }
+
+//     static float lambda_p(Vector3f wp, Vector3f wi) {
+//         float i_dot_p = pdot(wp, wi);
+//         return i_dot_p / (i_dot_p + pdot(wt(wp), wi) * Frame::sinTheta(wp));
+//     }
+
+// 	Color3f eval(const BSDFQueryRecord &bRec) const {
+// 		if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
+// 			return Color3f(0.0f);
+
+// 		Vector3f wp;
+//         Color3f rgb = m_normalMap->eval(bRec.its.uv);
+//         wp = Vector3f(2*rgb.r()-1, 2*rgb.g()-1, 2*rgb.b()-1).normalized();
+
+// 		if (Frame::cosTheta(wp) <= 0 || (std::abs(wp.x()) < 1e-6 && std::abs(wp.y()) < 1e-6))
+// 			return m_nested->eval(bRec);
+
+// 		Frame frame_wp(bRec.its.toWorld(wp));
+// 		Intersection perturbed_wp(bRec.its);
+// 		perturbed_wp.geoFrame = frame_wp;
+// 		perturbed_wp.shFrame = frame_wp;
+// 		perturbed_wp.wi = perturbed_wp.toLocal(bRec.its.toWorld(bRec.wi));
+
+// 		Vector3f wo_wp = perturbed_wp.toLocal(bRec.its.toWorld(bRec.wo));
+// 		Vector3f wt_ = bRec.its.toWorld(wt(wp));
+// 		Vector3f wo = bRec.its.toWorld(bRec.wo);
+// 		Vector3f wi = bRec.its.toWorld(bRec.wi);
+// 		Vector3f wo_reflected = (wo - 2.0f * wo.dot(wt_) * wt_).normalized();
+// 		float notShadowedWpMirror = 1.f - G1(wp, bRec.its.toLocal(wo_reflected));
+// 		wo_reflected = perturbed_wp.toLocal(wo_reflected);
+// 		float shadowing = G1(wp, bRec.wo);
+
+// 		Color3f value(0.f);
+
+// 		float lambda_p_ = lambda_p(wp, bRec.wi);
+
+// 		// i -> p -> o
+// 		BSDFQueryRecord evalSingleP(perturbed_wp, perturbed_wp.wi, wo_wp);
+// 		value += m_nested->eval(evalSingleP) * (lambda_p_ * shadowing);
+
+// 		// i -> p -> t -> o
+// 		if (wo.dot(wt_) > 0) {
+// 			BSDFQueryRecord evalDoubleP(perturbed_wp, perturbed_wp.wi, wo_reflected);
+// 			value += m_nested->eval(evalDoubleP) * (lambda_p_ * notShadowedWpMirror * shadowing);
+// 		}
+
+// 		// i -> t -> p -> o
+// 		if (wi.dot(wt_) > 0) {
+// 			Vector3f wi_reflected = (wi - 2.0f * wi.dot(wt_) * wt_).normalized();
+// 			BSDFQueryRecord evalDoubleT(perturbed_wp, perturbed_wp.toLocal(wi_reflected), wo_wp);
+// 			value += m_nested->eval(evalDoubleT) * ((1.f - lambda_p_) * shadowing);
+// 		}
+
+// 		return value;
+//     }
+
+// 	float pdf(const BSDFQueryRecord &bRec) const {
+// 		if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
+// 			return 0.0f;
+
+// 		Vector3f wp;
+//         Color3f rgb = m_normalMap->eval(bRec.its.uv);
+//         wp = Vector3f(2*rgb.r()-1, 2*rgb.g()-1, 2*rgb.b()-1).normalized();
+
+// 		if (Frame::cosTheta(wp) <= 0 || (std::abs(wp.x()) < 1e-6 && std::abs(wp.y()) < 1e-6)) {
+// 			return m_nested->pdf(bRec);
+// 		}
+
+// 		float probability_wp = lambda_p(wp, bRec.wi);
+// 		Frame frameWp(bRec.its.toWorld(wp));
+// 		Intersection perturbed_wp(bRec.its);
+// 		perturbed_wp.geoFrame = frameWp;
+// 		perturbed_wp.shFrame = frameWp;
+// 		Vector3f wi = bRec.its.toWorld(bRec.wi);
+// 		Vector3f wo = bRec.its.toWorld(bRec.wo);
+// 		Vector3f wt_ = bRec.its.toWorld(wt(wp));
+// 		float pdf = 0.f;
+// 		if (probability_wp > 0.f) {
+// 			BSDFQueryRecord queryWp(perturbed_wp, perturbed_wp.toLocal(wi), perturbed_wp.toLocal(wo));
+// 			pdf += probability_wp * m_nested->pdf(queryWp) * G1(wp, bRec.wo);
+
+// 			if (wo.dot(wt_) > 1e-6) {
+// 				Vector3f woReflected = (wo - 2.0f * wo.dot(wt_) * wt_).normalized();
+// 				BSDFQueryRecord queryWpt(perturbed_wp, perturbed_wp.toLocal(wi), perturbed_wp.toLocal(woReflected));
+// 				pdf += probability_wp * m_nested->pdf(queryWpt)
+// 					* (1.f - G1(wp, bRec.its.toLocal(woReflected)));
+// 			}
+// 		}
+
+// 		if (probability_wp < 1.f && wi.dot(wt_) > 1e-6) {
+// 			Vector3f wiReflected = (wi - 2.0f * wi.dot(wt_) * wt_).normalized();
+// 			BSDFQueryRecord queryWtp(perturbed_wp, perturbed_wp.toLocal(wiReflected), perturbed_wp.toLocal(wo));
+// 			pdf += (1.f - probability_wp) * m_nested->pdf(queryWtp);
+// 		}
+
+// 		return pdf;
+// 	}    
+
+// 	Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
+// 		if (Frame::cosTheta(bRec.wi) <= 0)
+// 			return Color3f(0.0f);
+
+// 		bRec.eta = 1.0f;
+
+// 		Vector3f wp;
+//         Color3f rgb = m_normalMap->eval(bRec.its.uv);
+//         wp = Vector3f(2*rgb.r()-1, 2*rgb.g()-1, 2*rgb.b()-1).normalized();
+
+// 		if (Frame::cosTheta(wp) <= 0 || (std::abs(wp.x()) < 1e-6 && std::abs(wp.y()) < 1e-6)) {
+// 			return m_nested->sample(bRec, sample);
+// 		}
+
+// 		Frame frame_wp(bRec.its.toWorld(wp));
+// 		Intersection perturbed_wp(bRec.its);
+// 		perturbed_wp.geoFrame = frame_wp;
+// 		perturbed_wp.shFrame = frame_wp;
+
+// 		Vector3f wt_ = bRec.its.toWorld(wt(wp));
+
+// 		Vector3f wr = -bRec.its.toWorld(bRec.wi);
+// 		Color3f energy(1.f);
+// 		if (sample.x() < lambda_p(wp, bRec.wi)) {
+// 			// sample on wp
+// 			perturbed_wp.wi = -perturbed_wp.toLocal(wr);
+// 			BSDFQueryRecord query_wp(perturbed_wp, Vector3f(1.f));
+// 			energy *= m_nested->sample(query_wp, sample);
+// 			// did sampling fail?
+// 			if (energy.isZero()) return energy;
+// 			wr = perturbed_wp.toWorld(query_wp.wo);
+// 			float G1_ = G1(wp, bRec.its.toLocal(wr));
+
+// 			// is the sampled direction shadowed?
+// 			if (sample.x() > G1_) {
+// 				// reflect on wt
+// 				wr = (wr + 2.0f * wt_.dot(-wr) * wt_).normalized();
+// 				energy *= G1(wp, bRec.its.toLocal(wr));
+// 			}
+// 		} else {
+// 			// do one reflection if we start at wt
+// 			wr = (wr + 2.0f * wt_.dot(-wr) * wt_).normalized();
+// 			// sample on wp
+// 			perturbed_wp.wi = -perturbed_wp.toLocal(wr);
+// 			BSDFQueryRecord query_wp(perturbed_wp, NULL);
+// 			energy *= m_nested->sample(query_wp, sample);
+// 			// did sampling fail?
+// 			if (energy.isZero()) return energy;
+// 			wr = perturbed_wp.toWorld(query_wp.wo);
+// 			energy *= G1(wp, bRec.its.toLocal(wr));
+// 		}
+// 		bRec.wo = bRec.its.toLocal(wr);
+// 		if (Frame::cosTheta(bRec.wo) <= 0.f) return Color3f(0.f);
+// 		return energy;
+// 	}
+
+//     void addChild(Object *obj) override {
+//         switch (obj->getClassType()) {
+//             case ETexture:
+//                 m_normalMap = static_cast<Texture<Color3f>*>(obj);
+//                 break;
+//             case EBSDF:
+//                 m_nested = static_cast<BSDF*>(obj);
+//                 // m_albedo = Color3f(0.f, 1.0f, 0.f); // this line is for debugging
+//                 m_albedo = m_nested->getColor();
+//                 break;
+//             default:
+//                 throw Exception("addChild is not supported other than normal maps and nested BSDF");
+//         }
+//     }
+
+//     EClassType getClassType() const { return EBSDF; }
+
+//     std::string toString() const {
+//         return fmt::format("NormalMapMircofacet[]");
+//     } 
+
+// private:
+//     Color3f m_albedo;
+//     Texture<Color3f>* m_normalMap = nullptr;
+//     BSDF* m_nested = nullptr;
+    
+// };
 
 
 class GGX : public BSDF {
@@ -606,9 +850,11 @@ private:
 KAZEN_REGISTER_CLASS(Diffuse, "diffuse");
 KAZEN_REGISTER_CLASS(Dielectric, "dielectric");
 KAZEN_REGISTER_CLASS(Mirror, "mirror");
-KAZEN_REGISTER_CLASS(Lambertian, "lambertian");
+KAZEN_REGISTER_CLASS(NormalMap, "normalmap");
+// KAZEN_REGISTER_CLASS(NormalMapMicrofacet, "normalmap_mircofacet");
 KAZEN_REGISTER_CLASS(GGX, "ggx");
 KAZEN_REGISTER_CLASS(RoughConductor, "roughconductor");
 KAZEN_REGISTER_CLASS(RoughPlastic, "roughplastic");
+// KAZEN_REGISTER_CLASS(RoughDielectric, "roughdieletric");
 // KAZEN_REGISTER_CLASS(Disney, "disney");
 NAMESPACE_END(kazen)

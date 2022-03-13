@@ -236,6 +236,7 @@ public:
 
                 /* Query the BSDF for that emitter-sampled direction */
                 BSDFQueryRecord bRec(its.toLocal(-ray.d), its.toLocal(lRec.wi), ESolidAngle);
+                bRec.its = its;
                 bRec.uv = its.uv;
                 Color3f f = its.mesh->getBSDF()->eval(bRec);
 
@@ -249,6 +250,7 @@ public:
             /* ----------------------- BSDF sampling ----------------------- */
             BSDFQueryRecord bRec(its.shFrame.toLocal(-ray.d));
             bRec.uv = its.uv;
+            bRec.its = its;
             auto bsdfColor = its.mesh->getBSDF()->sample(bRec, sampler->next2D()); // Sample BSDF * cos(theta)
             throughput *= bsdfColor;
             eta *= bRec.eta;

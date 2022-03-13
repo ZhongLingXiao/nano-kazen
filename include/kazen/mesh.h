@@ -28,6 +28,13 @@ struct Intersection {
     Frame geoFrame;
     /// Pointer to the associated mesh
     const Mesh *mesh;
+    /// dpdu and dpdv are the partial derivatives of the surface normal
+    /// with respect to the local coordinate system of the mesh
+    Vector3f dpdu, dpdv;
+
+    /// dndu and dndv are the partial derivatives of the shading normal
+    /// with respect to the local coordinate system of the mesh
+    Vector3f dndu, dndv;
 
     /// Create an uninitialized intersection record
     Intersection() : mesh(nullptr) { }

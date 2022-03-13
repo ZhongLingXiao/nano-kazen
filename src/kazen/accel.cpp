@@ -145,6 +145,7 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
         uint32_t idx0 = F(0, f), idx1 = F(1, f), idx2 = F(2, f);
 
         Point3f p0 = V.col(idx0), p1 = V.col(idx1), p2 = V.col(idx2);
+        Point2f uv0 = UV.col(idx0), uv1 = UV.col(idx1), uv2 = UV.col(idx2);
 
         /* Compute the intersection positon accurately
            using barycentric coordinates */
@@ -152,14 +153,66 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
 
         /* Compute proper texture coordinates if provided by the mesh */
         if (UV.size() > 0)
-            its.uv = bary.x() * UV.col(idx0) +
-                bary.y() * UV.col(idx1) +
-                bary.z() * UV.col(idx2);
+            its.uv = bary.x() * uv0 + bary.y() * uv1 + bary.z() * uv2;
 
         /* Compute the geometry frame */
         its.geoFrame = Frame((p1-p0).cross(p2-p0).normalized());
+        
+        if (N.size() > 0 && UV.size() > 0) {
+            Vector3f dP1=p1-p0, dP2=p2-p0;
+            Point2f dUV1=uv1-uv0, dUV2=uv2-uv0;
 
-        if (N.size() > 0) {
+            float length = dP1.cross(dP2).norm();
+            if (length == 0) {
+                its.shFrame = Frame(
+                    (bary.x() * N.col(idx0) +
+                    bary.y() * N.col(idx1) +
+                    bary.z() * N.col(idx2)).normalized());
+            } else {
+                float determinant = dUV1.x()*dUV2.y() - dUV1.y()*dUV2.x();
+                if (determinant == 0) {
+                    /* The user-specified parameterization is degenerate. Pick
+                    arbitrary tangents that are perpendicular to the geometric normal */
+                    // coordinateSystem(n.normalized(), its.dpdu, its.dpdv);
+                    Vector3f shadingNormal = 
+                        (bary.x() * N.col(idx0) +
+                         bary.y() * N.col(idx1) +
+                         bary.z() * N.col(idx2)).normalized();
+
+                    its.shFrame = Frame(shadingNormal);
+                    its.dpdu = its.shFrame.s; 
+                    its.dpdv = its.shFrame.t;
+                    its.dndu = Vector3f(0.f);
+                    its.dndv = Vector3f(0.f);
+                } else {
+                    float invDet = 1.0f / determinant;
+                    Vector3f dpdu = ( dUV2.y() * dP1 - dUV1.y() * dP2) * invDet;
+                    Vector3f dpdv = (-dUV2.x() * dP1 + dUV1.x() * dP2) * invDet;
+
+                    Normal3f shNormal = 
+                        (bary.x() * N.col(idx0) +
+                         bary.y() * N.col(idx1) +
+                         bary.z() * N.col(idx2));
+                    float invLN = 1.f / shNormal.norm(); 
+                    shNormal.normalize();
+
+                    Vector3f dndu = (N.col(idx1) - N.col(idx0)) * invLN;
+                    dndu -= shNormal * shNormal.dot(dndu);
+                    Vector3f dndv = (N.col(idx2) - N.col(idx0)) * invLN;
+                    dndv -= shNormal * shNormal.dot(dndv);
+
+                    its.dpdu = dpdu; 
+                    its.dpdv = dpdv;
+                    its.dndu = (dUV2.y()*dndu - dUV1.y()*dndv) * invDet;
+                    its.dndv = (-dUV2.x()*dndu + dUV1.x()*dndv) * invDet;
+
+                    its.shFrame.n = shNormal;
+                    its.shFrame.s = (its.dpdu - shNormal * shNormal.dot(its.dpdu)).normalized();
+                    its.shFrame.t = its.shFrame.n.cross(its.shFrame.s).normalized();         
+                }        
+            }
+        }
+        else if (N.size() > 0) {
             /* Compute the shading frame. Note that for simplicity,
                the current implementation doesn't attempt to provide
                tangents that are continuous across the surface. That
@@ -173,25 +226,6 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
         } else {
             its.shFrame = its.geoFrame;
         }
-
-        // /* Normal mapping */
-        // auto normalMap = its.mesh->getBSDF()->getNormalMap();
-        // if (normalMap) {
-        //     Color3f rgb = normalMap->eval(its.uv, false);
-        //     Vector3f localNormal(2 * rgb.r() - 1, 2 * rgb.g() - 1, 2 * rgb.b() - 1);
-        //     Vector3f dpdu = its.geoFrame.t;
-
-        //     Vector3f n = its.shFrame.n;
-        //     Vector3f s = (dpdu - n * n.dot(dpdu)).normalized();
-        //     Vector3f t( n(1) * s(2) - n(2) * s(1),
-        //                 n(2) * s(0) - n(0) * s(2),
-        //                 n(0) * s(1) - n(1) * s(0));
-        //     t.normalize();
-
-        //     Frame localFrame = Frame(s,t,n);
-        //     Vector3f worldNormal = localFrame.toWorld(localNormal.normalized());
-        //     its.shFrame = Frame(worldNormal);
-        // }
     }
 
     return foundIntersection;

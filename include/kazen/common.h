@@ -18,7 +18,7 @@
 
 
 /* "Ray epsilon": relative error threshold for ray intersection computations */
-#define Epsilon 1e-4f
+#define Epsilon 1e-5f
 
 /* A few useful constants */
 #undef M_PI
