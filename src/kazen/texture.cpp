@@ -195,13 +195,14 @@ private:
 
 
 /// Mix texture
-class MixTexture : public Texture<Color3f> {
+class BlendTexture : public Texture<Color3f> {
 public:
-    MixTexture(const PropertyList &propList) {
+    BlendTexture(const PropertyList &propList) {
+        m_op = propList.getString("blendmode", "mix");
         m_nested.reserve(2);
     }
 
-    ~MixTexture() {
+    ~BlendTexture() {
         if (m_mask) delete m_mask;
         for (auto& tex : m_nested) {
             if (tex) delete tex;
@@ -210,21 +211,28 @@ public:
 
     Color3f eval(const Point2f &uv) const override { 
         if (m_nested.size() != 2) {
-            throw Exception("MixTexture: need 2 textures, current size is : {}", m_nested.size());
+            throw Exception("Blend: need 2 textures, current size is : {}", m_nested.size());
         }
 
         Color3f mask = Color3f(0.5);
         if (m_mask)
             mask = m_mask->eval(uv);
-        // else
-        //     throw Exception("Error in finding mask file");
 
         auto color1 = m_nested[0]->eval(uv);
         auto color2 = m_nested[1]->eval(uv);
 
-        return Color3f( math::lerp(mask.x(), color2.x(), color1.x()),
-                        math::lerp(mask.y(), color2.y(), color1.y()),
-                        math::lerp(mask.z(), color2.z(), color1.z()));
+        if (m_op == "mix") {
+            return Color3f( math::lerp(mask.x(), color2.x(), color1.x()),
+                            math::lerp(mask.y(), color2.y(), color1.y()),
+                            math::lerp(mask.z(), color2.z(), color1.z()));
+        }
+        else if (m_op == "multiply") {
+            return Color3f( color2.x()*color1.x(),
+                            color2.y()*color1.y(),
+                            color2.z()*color1.z());
+        }
+
+        return Color3f(0.f);
     } 
 
     void addChild(Object *obj) override {
@@ -245,10 +253,11 @@ public:
     }
 
     std::string toString() const {
-        return fmt::format("ColorRampTexture[]");
+        return fmt::format("BlendTexture[]");
     }
 
 private:
+    std::string m_op = "mix";
     Texture<Color3f>* m_mask=nullptr; 
     std::vector<Texture<Color3f>* > m_nested; 
 };
@@ -259,6 +268,6 @@ KAZEN_REGISTER_CLASS(ImageTexture, "imagetexture");
 KAZEN_REGISTER_CLASS(NormalTexture, "normaltexture");
 KAZEN_REGISTER_CLASS(ColorRampTexture, "colorramp");
 KAZEN_REGISTER_CLASS(MaskTexture, "mask");
-KAZEN_REGISTER_CLASS(MixTexture, "mix");
+KAZEN_REGISTER_CLASS(BlendTexture, "blend");
 
 NAMESPACE_END(kazen)
