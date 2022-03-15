@@ -97,7 +97,7 @@ public:
     std::string toString() const {
         return fmt::format(
                 "NormalTexture[  \n"
-                "  m_filePath = {}},\n"
+                "  m_filename = {},\n"
                 "]",
                 m_filename.string()
         );
@@ -108,7 +108,157 @@ private:
 };
 
 
+/// TODO: remove all the following code
+
+/// color ramp texture
+class ColorRampTexture : public Texture<Color3f> {
+public:
+    ColorRampTexture(const PropertyList &propList) {
+        m_min= propList.getFloat("min", 0.0f);
+        m_max= propList.getFloat("max", 1.0f);
+    }
+
+    ~ColorRampTexture() {
+        if (m_nested) delete m_nested;
+    }
+
+    inline float ramp(float input) const {
+        input = math::clamp(input, 0.0f, 1.0f);
+        return m_min + (m_max - m_min) * input;
+    }
+
+    Color3f eval(const Point2f &uv) const override { 
+        if (m_nested) {
+            auto color = m_nested->eval(uv);
+            return Color3f(ramp(color.x()), ramp(color.y()), ramp(color.z()));  
+        }         
+        else return Color3f(0.f);
+    } 
+
+    void addChild(Object *obj) override {
+        switch (obj->getClassType()) {
+            case ETexture:
+                m_nested = static_cast<Texture<Color3f>*>(obj);
+                break;
+            default:
+                throw Exception("addChild is not supported other than nested Texture");
+        }
+    }
+
+    std::string toString() const {
+        return fmt::format("ColorRampTexture[]");
+    }
+
+private:
+    float m_min = 0.0f;
+    float m_max = 1.0f;
+    Texture<Color3f>* m_nested=nullptr; 
+};
+
+/// normal map
+class MaskTexture : public Texture<Color3f> {
+public:
+    MaskTexture(const PropertyList &propList) {
+        auto fileName = propList.getString("filename");
+        filesystem::path filePath = getFileResolver()->resolve(fileName);
+        m_filename = OIIO::ustring(filePath.str());     
+    }
+
+    Color3f eval(const Point2f &uv) const override {    
+        OIIO::TextureOpt options;
+        float color[3] = {0.5f, 0.5f, 1.0f};
+        getTextureSystem()->texture(
+            m_filename,
+            options,
+            uv.x(), 1.0f-uv.y(),
+            0, 0, 0, 0,
+            3, &color[0]);  
+        return Color3f(color[0], color[1], color[2]);
+    } 
+
+    std::string toString() const {
+        return fmt::format(
+                "MaskTexture[  \n"
+                "  m_filename = {},\n"
+                "]",
+                m_filename.string()
+        );
+    }
+
+    ETextureType getTextureType() const override {
+        return ETextureType::EMask;
+    }
+
+private:
+    OIIO::ustring m_filename;
+};
+
+
+/// Mix texture
+class MixTexture : public Texture<Color3f> {
+public:
+    MixTexture(const PropertyList &propList) {
+        m_nested.reserve(2);
+    }
+
+    ~MixTexture() {
+        if (m_mask) delete m_mask;
+        for (auto& tex : m_nested) {
+            if (tex) delete tex;
+        }
+    }
+
+    Color3f eval(const Point2f &uv) const override { 
+        if (m_nested.size() != 2) {
+            throw Exception("MixTexture: need 2 textures, current size is : {}", m_nested.size());
+        }
+
+        Color3f mask = Color3f(0.5);
+        if (m_mask)
+            mask = m_mask->eval(uv);
+        // else
+        //     throw Exception("Error in finding mask file");
+
+        auto color1 = m_nested[0]->eval(uv);
+        auto color2 = m_nested[1]->eval(uv);
+
+        return Color3f( math::lerp(mask.x(), color2.x(), color1.x()),
+                        math::lerp(mask.y(), color2.y(), color1.y()),
+                        math::lerp(mask.z(), color2.z(), color1.z()));
+    } 
+
+    void addChild(Object *obj) override {
+        switch (obj->getClassType()) {
+            case ETexture: {
+                Texture<Color3f>* temp = static_cast<Texture<Color3f>*>(obj);
+                if (temp->getTextureType() == ETextureType::EMask) {
+                    m_mask = temp;
+                }
+                else {
+                    m_nested.push_back(temp);
+                }
+                break;
+            }
+            default:
+                throw Exception("addChild is not supported other than nested Texture");
+        }
+    }
+
+    std::string toString() const {
+        return fmt::format("ColorRampTexture[]");
+    }
+
+private:
+    Texture<Color3f>* m_mask=nullptr; 
+    std::vector<Texture<Color3f>* > m_nested; 
+};
+
+
 KAZEN_REGISTER_CLASS(ConstantTexture, "constanttexture");
 KAZEN_REGISTER_CLASS(ImageTexture, "imagetexture");
 KAZEN_REGISTER_CLASS(NormalTexture, "normaltexture");
+KAZEN_REGISTER_CLASS(ColorRampTexture, "colorramp");
+KAZEN_REGISTER_CLASS(MaskTexture, "mask");
+KAZEN_REGISTER_CLASS(MixTexture, "mix");
+
 NAMESPACE_END(kazen)

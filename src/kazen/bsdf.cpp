@@ -195,6 +195,85 @@ public:
 
 
 /// normal map (normal switch)
+class Lambertian : public BSDF {
+public:
+    Lambertian(const PropertyList &propList) { }
+
+    ~Lambertian() {
+        if(!m_albedo) delete m_albedo;
+    }
+
+    Color3f eval(const BSDFQueryRecord &bRec) const override {
+        /* This is a smooth BRDF -- return zero if the measure
+           is wrong, or when queried for illumination on the backside */
+        if (bRec.measure != ESolidAngle
+            || Frame::cosTheta(bRec.wi) <= 0
+            || Frame::cosTheta(bRec.wo) <= 0)
+            return Color3f(0.0f);
+
+        /* The BRDF is simply the albedo / pi */
+        return m_albedo->eval(bRec.uv) * INV_PI * Frame::cosTheta(bRec.wo);
+    }
+
+    float pdf(const BSDFQueryRecord &bRec) const override {
+        /* This is a smooth BRDF -- return zero if the measure
+           is wrong, or when queried for illumination on the backside */
+        if (bRec.measure != ESolidAngle
+            || Frame::cosTheta(bRec.wi) <= 0
+            || Frame::cosTheta(bRec.wo) <= 0)
+            return 0.0f;
+
+
+        /* Importance sampling density wrt. solid angles:
+           cos(theta) / pi.
+
+           Note that the directions in 'bRec' are in local coordinates,
+           so Frame::cosTheta() actually just returns the 'z' component.
+        */
+        return INV_PI * Frame::cosTheta(bRec.wo);       
+    }
+
+    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const override {
+        if (Frame::cosTheta(bRec.wi) <= 0)
+            return Color3f(0.0f);
+
+        bRec.measure = ESolidAngle;
+
+        /* Warp a uniformly distributed sample on [0,1]^2
+           to a direction on a cosine-weighted hemisphere */
+        bRec.wo = Warp::squareToCosineHemisphere(sample);
+
+        /* Relative index of refraction: no change */
+        bRec.eta = 1.0f;
+
+        /* eval() / pdf() * cos(theta) = albedo. There
+           is no need to call these functions. */
+        return m_albedo->eval(bRec.uv);
+    }
+
+    void addChild(Object *obj) override {
+        switch (obj->getClassType()) {
+            case ETexture:
+                m_albedo = static_cast<Texture<Color3f>*>(obj);
+                break;
+            default:
+                throw Exception("addChild is not supported other than albedi maps");
+        }
+    }
+
+    EClassType getClassType() const { return EBSDF; }
+
+    std::string toString() const {
+        return fmt::format("Lambertian[]");
+    }    
+
+private:
+    Texture<Color3f>* m_albedo=nullptr;
+};
+
+
+
+/// normal map (normal switch)
 class NormalMap : public BSDF {
 public:
     NormalMap(const PropertyList &propList) { }
@@ -222,6 +301,9 @@ public:
 		if (Frame::cosTheta(bRec.wo) * Frame::cosTheta(perturbedQuery.wo) <= 0)
 			return Color3f(0.0f);
 
+        perturbedQuery.uv = bRec.uv;
+        perturbedQuery.measure = bRec.measure;
+        perturbedQuery.eta = bRec.eta;
         return m_nested->eval(perturbedQuery);
     }
 
@@ -242,7 +324,10 @@ public:
         
 		if (Frame::cosTheta(bRec.wo) * Frame::cosTheta(perturbedQuery.wo) <= 0)
 			return 0.0f;
-
+        
+        perturbedQuery.uv = bRec.uv;
+        perturbedQuery.measure = bRec.measure;
+        perturbedQuery.eta = bRec.eta;
         return m_nested->pdf(perturbedQuery);        
     }
 
@@ -258,8 +343,11 @@ public:
 
 		Intersection perturbed(its);
 		perturbed.shFrame = getFrame(its, n.normalized(), bRec.wi);
-
+        
         BSDFQueryRecord perturbedQuery(perturbed.toLocal(its.toWorld(bRec.wi)));
+        perturbedQuery.uv = its.uv;
+        perturbedQuery.measure = bRec.measure;
+        perturbedQuery.eta = bRec.eta;
         Color3f result = m_nested->sample(perturbedQuery, sample);
         if (!result.isZero()) {
             bRec.wo = its.toLocal(perturbed.toWorld(perturbedQuery.wo));
@@ -850,11 +938,12 @@ private:
 KAZEN_REGISTER_CLASS(Diffuse, "diffuse");
 KAZEN_REGISTER_CLASS(Dielectric, "dielectric");
 KAZEN_REGISTER_CLASS(Mirror, "mirror");
+KAZEN_REGISTER_CLASS(Lambertian, "lambertian");
 KAZEN_REGISTER_CLASS(NormalMap, "normalmap");
 // KAZEN_REGISTER_CLASS(NormalMapMicrofacet, "normalmap_mircofacet");
 KAZEN_REGISTER_CLASS(GGX, "ggx");
 KAZEN_REGISTER_CLASS(RoughConductor, "roughconductor");
 KAZEN_REGISTER_CLASS(RoughPlastic, "roughplastic");
-// KAZEN_REGISTER_CLASS(RoughDielectric, "roughdieletric");
+// KAZEN_REGISTER_CLASS(RoughDieletric, "roughdieletric");
 // KAZEN_REGISTER_CLASS(Disney, "disney");
 NAMESPACE_END(kazen)
