@@ -198,7 +198,7 @@ private:
 class BlendTexture : public Texture<Color3f> {
 public:
     BlendTexture(const PropertyList &propList) {
-        m_op = propList.getString("blendmode", "mix");
+        m_blendmode = propList.getString("blendmode", "mix");
         m_nested.reserve(2);
     }
 
@@ -221,12 +221,12 @@ public:
         auto color1 = m_nested[0]->eval(uv);
         auto color2 = m_nested[1]->eval(uv);
 
-        if (m_op == "mix") {
+        if (m_blendmode == "mix") {
             return Color3f( math::lerp(mask.x(), color2.x(), color1.x()),
                             math::lerp(mask.y(), color2.y(), color1.y()),
                             math::lerp(mask.z(), color2.z(), color1.z()));
         }
-        else if (m_op == "multiply") {
+        else if (m_blendmode == "multiply") {
             return Color3f( color2.x()*color1.x(),
                             color2.y()*color1.y(),
                             color2.z()*color1.z());
@@ -257,7 +257,7 @@ public:
     }
 
 private:
-    std::string m_op = "mix";
+    std::string m_blendmode = "mix";
     Texture<Color3f>* m_mask=nullptr; 
     std::vector<Texture<Color3f>* > m_nested; 
 };
