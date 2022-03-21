@@ -16,6 +16,7 @@ Color3f lerp(Color3f t, const float c1, const float c2) {
     return t * c1 + (1.f - t) * c2;
 }
 
+
 // Evaluates the Frensel equation for a conductor with the specified f0 value (i.e. reflectance at
 // normal incidence), using the Schlick approximation.
 Color3f evaluateSchlickFresnel(Color3f f0, float cosTheta) {
@@ -124,6 +125,27 @@ float computeGGXSmithPDF(Vector3f V, Vector3f H, Vector2f alpha) {
     // The PDF is simply the evaluation of the VNDF.
     return evaluateGGXSmithVNDF(V, H, alpha);
 }
+
+// Evaluates the GGX-Smith glossy BRDF, returning the BRDF value along with the Fresnel term used.
+Color3f evaluateGGXSmith(Vector3f V, Vector3f L, float roughness, float anisotropy) {
+    // Return black if the view and light directions are in opposite hemispheres.
+    if (V.z() * L.z() < 0.0f)
+        return Color3f(0.0f);
+
+    // Convert roughness and anisotropy to alpha values.
+    Vector2f alpha = roughnessToAlpha(roughness, anisotropy);
+
+    // Compute the D (NDF), G (visibility), and F (Fresnel) terms, along with the microfacet BRDF
+    // denominator.
+    Vector3f H  = (V + L).normalized();
+    float D     = evaluateGGXNDF(H, alpha);
+    float G     = evaluateSmithG2(V, L, H, alpha);
+    float denom = 4.0f * abs(V.z()) * abs(L.z());
+
+    // Return the combined microfacet expression.
+    return D * G / denom;
+}
+
 
 // Evaluates the GGX-Smith glossy BRDF, returning the BRDF value along with the Fresnel term used.
 Color3f evaluateGGXSmithBRDF(Vector3f V, Vector3f L, Color3f f0, float roughness, 

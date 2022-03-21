@@ -1138,3 +1138,42 @@ Frame getFrame(const Intersection &its, Vector3f wi) const {
 
 
 
+------
+
+
+
+`2022.3.15`**嵌套 texture 实现**
+
+1. ramp color ：将颜色值重映射到某个范围，这个主要用作调整某个 texture 比如 roughness 的范围
+2. blend ：混合 texture ，目前提供 mix 和 multiply 两种方式
+
+> 注意：这部分代码主要为 Q1 demo 使用。最后还是要被 osl 替代掉。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -50,9 +50,9 @@ public:
     
     virtual Color3f eval(const LightQueryRecord &lRec) const = 0;
     
-    virtual float pdf(const Mesh* mesh, const LightQueryRecord &lRec) const = 0;
+    virtual float pdf(const LightQueryRecord &lRec, const Mesh *mesh) const = 0;
   
-    virtual Color3f sample(const Mesh *mesh, LightQueryRecord &lRec, Sampler *sampler) const = 0;
+    virtual Color3f sample(LightQueryRecord &lRec, Sampler *sampler, const Mesh *mesh) const = 0;
 
     /**
      * \brief Return the type of object (i.e. Mesh/Light/etc.) 

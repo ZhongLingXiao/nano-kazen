@@ -35,21 +35,24 @@ public:
         auto fileName = propList.getString("filename");
         filesystem::path filePath = getFileResolver()->resolve(fileName);
         m_filename = OIIO::ustring(filePath.str());     
-        auto m_colorspace = propList.getString("colorspace", "srgb");
+        m_colorspace = propList.getString("colorspace", "srgb");
+        m_scale = propList.getFloat("scale", 1.0f);
     }
 
     Color3f eval(const Point2f &uv) const override {    
         OIIO::TextureOpt options;
+        options.swrap = OIIO::TextureOpt::WrapPeriodic;
+        options.twrap = OIIO::TextureOpt::WrapPeriodic;
         float color[3] = {0.5f, 0.5f, 1.0f};
         getTextureSystem()->texture(
             m_filename,
             options,
-            uv.x(), 1.0f-uv.y(),
+            uv.x()*m_scale, (1.0f-uv.y())*m_scale,
             0, 0, 0, 0,
             3, &color[0]);  
         
         /* Notice: Needed toLinearRGB to get linear color workflow */
-        if (m_colorspace.string() == "srgb")
+        if (m_colorspace == "srgb")
             return Color3f(color[0], color[1], color[2]).toLinearRGB();
         
         return Color3f(color[0], color[1], color[2]);
@@ -62,49 +65,14 @@ public:
                 "   m_colorspace = {},  \n"
                 "]                      \n",
                 m_filename.string(),
-                m_colorspace.string()
+                m_colorspace
         );
     }
 
 private:
     OIIO::ustring m_filename;
-    OIIO::ustring m_colorspace;
-};
-
-
-/// normal map
-class NormalTexture : public Texture<Color3f> {
-public:
-    NormalTexture(const PropertyList &propList) {
-        auto fileName = propList.getString("filename");
-        filesystem::path filePath = getFileResolver()->resolve(fileName);
-        m_filename = OIIO::ustring(filePath.str());     
-        // auto m_colorspace = propList.getString("colorspace", "linear");
-    }
-
-    Color3f eval(const Point2f &uv) const override {    
-        OIIO::TextureOpt options;
-        float color[3] = {0.5f, 0.5f, 1.0f};
-        getTextureSystem()->texture(
-            m_filename,
-            options,
-            uv.x(), 1.0f-uv.y(),
-            0, 0, 0, 0,
-            3, &color[0]);  
-        return Color3f(color[0], color[1], color[2]);
-    } 
-
-    std::string toString() const {
-        return fmt::format(
-                "NormalTexture[  \n"
-                "  m_filename = {},\n"
-                "]",
-                m_filename.string()
-        );
-    }
-
-private:
-    OIIO::ustring m_filename;
+    std::string m_colorspace;
+    float m_scale;
 };
 
 
@@ -155,81 +123,41 @@ private:
     Texture<Color3f>* m_nested=nullptr; 
 };
 
-/// normal map
-class MaskTexture : public Texture<Color3f> {
-public:
-    MaskTexture(const PropertyList &propList) {
-        auto fileName = propList.getString("filename");
-        filesystem::path filePath = getFileResolver()->resolve(fileName);
-        m_filename = OIIO::ustring(filePath.str());     
-    }
-
-    Color3f eval(const Point2f &uv) const override {    
-        OIIO::TextureOpt options;
-        float color[3] = {0.5f, 0.5f, 1.0f};
-        getTextureSystem()->texture(
-            m_filename,
-            options,
-            uv.x(), 1.0f-uv.y(),
-            0, 0, 0, 0,
-            3, &color[0]);  
-        return Color3f(color[0], color[1], color[2]);
-    } 
-
-    std::string toString() const {
-        return fmt::format(
-                "MaskTexture[  \n"
-                "  m_filename = {},\n"
-                "]",
-                m_filename.string()
-        );
-    }
-
-    ETextureType getTextureType() const override {
-        return ETextureType::EMask;
-    }
-
-private:
-    OIIO::ustring m_filename;
-};
-
 
 /// Mix texture
 class BlendTexture : public Texture<Color3f> {
 public:
     BlendTexture(const PropertyList &propList) {
         m_blendmode = propList.getString("blendmode", "mix");
-        m_nested.reserve(2);
     }
 
     ~BlendTexture() {
         if (m_mask) delete m_mask;
-        for (auto& tex : m_nested) {
-            if (tex) delete tex;
-        }
+        if (m_input1) delete m_input1;
+        if (m_input2) delete m_input2;
     }
 
     Color3f eval(const Point2f &uv) const override { 
-        if (m_nested.size() != 2) {
-            throw Exception("Blend: need 2 textures, current size is : {}", m_nested.size());
-        }
 
-        Color3f mask = Color3f(0.5);
+        Color3f mask = Color3f(0.5f);
+        Color3f input1 = Color3f(0.f);
+        Color3f input2 = Color3f(1.f);
         if (m_mask)
             mask = m_mask->eval(uv);
-
-        auto color1 = m_nested[0]->eval(uv);
-        auto color2 = m_nested[1]->eval(uv);
+        if (m_input1)
+            input1 = m_input1->eval(uv);
+        if (m_input2)
+            input2 = m_input2->eval(uv);
 
         if (m_blendmode == "mix") {
-            return Color3f( math::lerp(mask.x(), color2.x(), color1.x()),
-                            math::lerp(mask.y(), color2.y(), color1.y()),
-                            math::lerp(mask.z(), color2.z(), color1.z()));
+            return Color3f( math::lerp(mask.x(), input1.x(), input2.x()),
+                            math::lerp(mask.y(), input1.y(), input2.y()),
+                            math::lerp(mask.z(), input1.z(), input2.z()));
         }
-        else if (m_blendmode == "multiply") {
-            return Color3f( color2.x()*color1.x(),
-                            color2.y()*color1.y(),
-                            color2.z()*color1.z());
+        else if (m_blendmode == "multiply") {        
+            return Color3f( input1.x()*input2.x(),
+                            input1.y()*input2.y(),
+                            input1.z()*input2.z());
         }
 
         return Color3f(0.f);
@@ -238,12 +166,23 @@ public:
     void addChild(Object *obj) override {
         switch (obj->getClassType()) {
             case ETexture: {
-                Texture<Color3f>* temp = static_cast<Texture<Color3f>*>(obj);
-                if (temp->getTextureType() == ETextureType::EMask) {
-                    m_mask = temp;
+                if( obj->getId() == "mask" ) {
+                    if (m_mask)
+                        throw Exception("There is already an mask defined!");
+                    m_mask = static_cast<Texture<Color3f> *>(obj);
                 }
+                else if ( obj->getId() == "input1" ) {
+                    if (m_input1)
+                        throw Exception("There is already an input1 defined!");
+                    m_input1 = static_cast<Texture<Color3f> *>(obj);
+                }
+                else if ( obj->getId() == "input2" ) {
+                    if (m_input2)
+                        throw Exception("There is already an input2 defined!");
+                    m_input2 = static_cast<Texture<Color3f> *>(obj);
+                } 
                 else {
-                    m_nested.push_back(temp);
+                    throw Exception("The name of this texture does not match any field!");
                 }
                 break;
             }
@@ -259,15 +198,14 @@ public:
 private:
     std::string m_blendmode = "mix";
     Texture<Color3f>* m_mask=nullptr; 
-    std::vector<Texture<Color3f>* > m_nested; 
+    Texture<Color3f>* m_input1=nullptr; 
+    Texture<Color3f>* m_input2=nullptr; 
 };
 
 
 KAZEN_REGISTER_CLASS(ConstantTexture, "constanttexture");
 KAZEN_REGISTER_CLASS(ImageTexture, "imagetexture");
-KAZEN_REGISTER_CLASS(NormalTexture, "normaltexture");
 KAZEN_REGISTER_CLASS(ColorRampTexture, "colorramp");
-KAZEN_REGISTER_CLASS(MaskTexture, "mask");
 KAZEN_REGISTER_CLASS(BlendTexture, "blend");
 
 NAMESPACE_END(kazen)

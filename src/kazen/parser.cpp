@@ -187,7 +187,7 @@ Object *loadFromXML(const std::string &filename) {
                 }
 
                 /* Set the name to help parent decide what to do with this node */
-                result->setId(node.attribute("name").value());
+                result->setId(node.attribute("id").value());
 
                 /* Add all children */
                 for (auto ch: children) {

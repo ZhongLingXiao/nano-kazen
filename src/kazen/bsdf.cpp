@@ -623,7 +623,6 @@ private:
 class GGX : public BSDF {
 public:
     GGX(const PropertyList &propList) { 
-        m_albedo = propList.getColor("albedo", Color3f(0.5f));
         m_roughness = propList.getFloat("roughness", 0.5f);
         m_anisotropy = propList.getFloat("anisotropy", 0.f);
     }
@@ -632,7 +631,8 @@ public:
         if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
             return Color3f(0.0f);        
         Color3f F;
-        return evaluateGGXSmithBRDF(bRec.wi, bRec.wo, m_albedo, m_roughness, m_anisotropy, F) * Frame::cosTheta(bRec.wo);
+        Color3f albedo = m_albedo->eval(bRec.uv);
+        return evaluateGGXSmithBRDF(bRec.wi, bRec.wo, albedo, m_roughness, m_anisotropy, F) * Frame::cosTheta(bRec.wo);
     }
 
     float pdf(const BSDFQueryRecord &bRec) const {
@@ -648,7 +648,9 @@ public:
     Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
         if (Frame::cosTheta(bRec.wi) <= 0)
             return Color3f(0.0f);
-        Color3f color = sampleGGXSmithBRDF(bRec.wi, m_albedo, m_roughness, m_anisotropy, sample, bRec.wo, bRec.pdf);
+        Color3f albedo = m_albedo->eval(bRec.uv);            
+        Color3f color = sampleGGXSmithBRDF(bRec.wi, albedo, m_roughness, m_anisotropy, sample, bRec.wo, bRec.pdf);
+        
         if (Frame::cosTheta(bRec.wo) <= 0)
             return Color3f(0.0f);
 
@@ -656,12 +658,22 @@ public:
 
     }
 
+    void addChild(Object *obj) override {
+        switch (obj->getClassType()) {
+            case ETexture:
+                m_albedo = static_cast<Texture<Color3f>*>(obj);
+                break;
+            default:
+                throw Exception("addChild is not supported other than albedi maps");
+        }
+    }
+
     std::string toString() const {
         return "GGX[]";
     }
 
 private:
-    Color3f m_albedo;
+    Texture<Color3f>* m_albedo=nullptr;
     float m_roughness;
     float m_anisotropy;
 };
@@ -926,12 +938,183 @@ private:
 /// TODO: Rough Dielectric
 
 
-// disney bsdf
-class Disney : public BSDF {
+/// kazen innercircle standard surface (kiss)
+/* References:
+* [1] [Physically Based Shading at Disney] https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf
+* [2] [Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering] https://blog.selfshadow.com/publications/s2015-shading-course/burley/s2015_pbs_disney_bsdf_notes.pdf
+* [3] [Simon Kallweit's project report] http://simon-kallweit.me/rendercompo2015/report/
+* [4] [Microfacet Models for Refraction through Rough Surfaces] https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
+* [5] [Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs] https://jcgt.org/published/0003/02/03/paper.pdf
+* [6] [Sampling the GGX Distribution of Visible Normals] https://jcgt.org/published/0007/04/01/paper.pdf
+*/
+class KazenStandardSurface : public BSDF {
 public:
+    KazenStandardSurface(const PropertyList &proplist) {
+        m_roughness = proplist.getFloat("roughness", 0.5f);
+        m_metallic = proplist.getFloat("metallic", 0.0f);
+        m_anisotropy = proplist.getFloat("anisotropy", 0.0f);
+        m_specular = proplist.getFloat("specular", 0.5f);
+        m_specularTint = proplist.getFloat("specularTint", 0.5f); 
+        m_clearcoat = proplist.getFloat("clearcoat", 0.0f);
+        m_clearcoatRoughness = proplist.getFloat("clearcoatRoughness", 0.5f);               
+        m_sheen = proplist.getFloat("sheen", 0.0f);
+        m_sheenTint = proplist.getFloat("sheenTint", 0.5);
+    }
 
+    float schlickWeight(float x) const {
+        x = math::clamp(1.f - x, 0.f, 1.f);
+        auto x2 = x * x;
+        return x2 * x2 * x;
+    }
+
+    Color3f lerp(const Color3f& c1, const Color3f& c2, float t) const {
+        return (1.f - t) * c1 + t * c2;
+    }
+
+    float ior(float specular) const {
+        return 2.f/(1.f - std::sqrt(0.08*specular)) - 1.f;
+    };
+
+    Color3f eval(const BSDFQueryRecord &bRec) const {
+        /* This is a smooth BRDF -- return zero if the measure
+           is wrong, or when queried for illumination on the backside */
+        if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
+            return Color3f(0.0f);
+
+        Vector3f V = bRec.wi;
+        Vector3f L = bRec.wo;
+        Vector3f H = (V + L).normalized();
+
+        // color 
+        Color3f Cdlin = m_baseColor->eval(bRec.uv);
+        float Cdlum = Cdlin.getLuminance();
+        Color3f Ctint = Cdlum > 0.f ? Cdlin/Cdlum : Color3f(1.f);
+		Color3f Ctintmix = .08 * m_specular * lerp(Color3f(1.f), Ctint, m_specularTint);
+		Color3f Cspec0 = lerp(Ctintmix, Cdlin, m_metallic);
+
+        // diffuse
+        float FL = schlickWeight(L.z());
+        float FV = schlickWeight(V.z());
+        float FH = schlickWeight(L.dot(H));
+
+        float cosThetaD = V.dot(H);
+        float FD90 = 0.5f * 2 * m_roughness * cosThetaD * cosThetaD;
+
+        float Lambert = (1.f - 0.5f*FL) * (1.f - 0.5f*FV);
+        float RR = 2.f * m_roughness * cosThetaD * cosThetaD;
+        float retro_reflection = RR * (FL + FV + FL * FV * (RR - 1.f));
+
+        // sheen
+        Color3f Csheen = lerp(Color3f(1.f), Ctint, m_sheenTint);
+        Color3f Fsheen = FH * m_sheen * Csheen;
+
+        // specular
+        Color3f F;
+        Color3f specTerm = evaluateGGXSmithBRDF(V, L, Cspec0, m_roughness, m_anisotropy, F);         
+
+        // clearcoat(ior = 1.5 -> F0 = 0.04)
+        float clearcoatRoughness = math::lerp(m_clearcoatRoughness, .01f, .3f);
+        Color3f clearcoatTerm = 0.25f * m_clearcoat * evaluateGGXSmithBRDF(V, L, 0.04f, clearcoatRoughness, m_anisotropy, F);       
+
+        return ((1.f-m_metallic)*(Cdlin * INV_PI * (Lambert + retro_reflection) +  Fsheen) +
+                specTerm + clearcoatTerm)* Frame::cosTheta(bRec.wo);
+    }
+
+    float pdf(const BSDFQueryRecord &bRec) const override {
+        /* This is a smooth BRDF -- return zero if the measure
+           is wrong, or when queried for illumination on the backside */
+        if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
+            return 0.0f;
+
+        // weight: reference - http://simon-kallweit.me/rendercompo2015/report/
+        float diffuse = (1.f - m_metallic) * 0.5f;
+        float GTR2 = 1.f / (1.f + m_clearcoat);
+
+        auto H = (bRec.wi + bRec.wo).normalized();
+        auto jacobian = 4.0f * bRec.wi.dot(H);
+        
+        // specular 
+        auto alpha = roughnessToAlpha(m_roughness, m_anisotropy);
+        auto specPdf = computeGGXSmithPDF(bRec.wi, H, alpha) / jacobian;
+
+        // clearcoat
+        auto alphacoat = roughnessToAlpha(math::lerp(m_clearcoatRoughness, .01f, .3f), 0.f);
+        float clearcoatPdf = computeGGXSmithPDF(bRec.wi, H, alphacoat) / jacobian;
+
+        return diffuse * INV_PI * Frame::cosTheta(bRec.wo) +
+                (1.f-diffuse) * (GTR2*specPdf + (1.f-GTR2)*clearcoatPdf);  
+    
+    }
+
+    Color3f sample(BSDFQueryRecord &bRec, const Point2f &_sample) const override {
+        if (Frame::cosTheta(bRec.wi) <= 0)
+            return Color3f(0.0f);
+
+        bRec.measure = ESolidAngle;
+        /* Relative index of refraction: no change */
+        bRec.eta = 1.0f;
+
+        float diffuse = (1.f - m_metallic) * 0.5f;
+
+		if (_sample.x() < diffuse) {
+            auto sample = Point2f(_sample.x()/diffuse, _sample.y());
+            bRec.wo = Warp::squareToCosineHemisphere(sample);
+		} else {
+			auto sample = Point2f((_sample.x()-diffuse) / (1.f-diffuse), _sample.y());
+            float GTR2 = 1.f / (1.f + m_clearcoat);
+            
+            Vector3f H;
+            Point2f sample1;
+            bool flip = bRec.wi.z() <= 0.f;
+            if (sample.x() < GTR2) {
+                sample1 = Point2f(sample.x() / GTR2, sample.y());
+                Vector2f alpha = roughnessToAlpha(m_roughness, m_anisotropy);
+                H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample1);
+            } else {
+                sample1 = Point2f((sample.x()-GTR2) / (1.f-GTR2), sample.y());
+                Vector2f alpha = roughnessToAlpha(math::lerp(m_clearcoatRoughness, 0.01f, .3f), 0.f);
+                bool flip   = bRec.wi.z() <= 0.0f;
+                H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample1);
+            }
+            H = flip ? -H : H;
+            // Reflect the view direction across the microfacet normal to get the sample direction.
+            bRec.wo = reflect(bRec.wi, H).normalized();
+		}
+
+        if (Frame::cosTheta(bRec.wo) <= 0)
+            return Color3f(0.f);
+
+		// return eval(bRec) / pdf(bRec) * Frame::cosTheta(bRec.wo);
+		return eval(bRec) / pdf(bRec);
+    }
+
+    void addChild(Object *obj) override {
+        switch (obj->getClassType()) {
+            case ETexture:
+                m_baseColor = static_cast<Texture<Color3f>*>(obj);
+                break;
+            default:
+                throw Exception("addChild is not supported other than baseColor maps");
+        }
+    }
+
+    std::string toString() const {
+        return fmt::format(
+            "KazenStandardSurface"
+        );
+    }
 
 private:
+    Texture<Color3f>* m_baseColor=nullptr;
+    float m_roughness;
+    float m_metallic;
+    float m_anisotropy;
+    float m_specular;
+    float m_specularTint;
+    float m_sheen;
+    float m_sheenTint;
+    float m_clearcoat;
+    float m_clearcoatRoughness;
 };
 
 
@@ -945,5 +1128,5 @@ KAZEN_REGISTER_CLASS(GGX, "ggx");
 KAZEN_REGISTER_CLASS(RoughConductor, "roughconductor");
 KAZEN_REGISTER_CLASS(RoughPlastic, "roughplastic");
 // KAZEN_REGISTER_CLASS(RoughDieletric, "roughdieletric");
-// KAZEN_REGISTER_CLASS(Disney, "disney");
+KAZEN_REGISTER_CLASS(KazenStandardSurface, "kazenstandard");
 NAMESPACE_END(kazen)

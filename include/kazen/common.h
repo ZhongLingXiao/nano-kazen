@@ -219,7 +219,7 @@ NAMESPACE_BEGIN(math)
 
     /// Linearly interpolate between two values
     inline float lerp(float t, float v1, float v2) {
-        return ((float) 1 - t) * v1 + t * v2;
+        return (1.f - t) * v1 + t * v2;
     }
 
     /// Always-positive modulo operation

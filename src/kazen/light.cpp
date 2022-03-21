@@ -15,7 +15,7 @@ public:
         return cosTheta > 0.f ?  m_radiance : 0.f;
     }
 
-    Color3f sample(const Mesh *mesh, LightQueryRecord &lRec, Sampler *sampler) const override {       
+    Color3f sample(LightQueryRecord &lRec, Sampler *sampler, const Mesh *mesh) const override {       
         mesh->sample(sampler, lRec.p, lRec.n);
         lRec.wi = (lRec.p - lRec.ref).normalized();
         lRec.shadowRay = Ray3f(lRec.ref, lRec.wi, Epsilon, (lRec.p-lRec.ref).norm()-Epsilon);
@@ -23,14 +23,14 @@ public:
         /* Calculate geometric term: G(x<->y) = |ny*(y->x)| / ||x-y||^2 
          * |nx*(x->y)| using its data, so it should calculate in integrator
         */
-        lRec.pdf = pdf(mesh, lRec);
+        lRec.pdf = pdf(lRec, mesh);
         if (lRec.pdf > 0.f && !std::isnan(lRec.pdf) && !std::isinf(lRec.pdf)) {
             return eval(lRec) / lRec.pdf; // divided by the probability of the sample y per unit area.
         }
         return Color3f(0.f);
     }
 
-    float pdf(const Mesh* mesh, const LightQueryRecord &lRec) const override {
+    float pdf(const LightQueryRecord &lRec, const Mesh *mesh) const override {
         float pdf = mesh->pdf(); // mesh pdf
         float cosTheta = lRec.n.dot(-lRec.wi);
         /* For balance heuristic: Transform the integration variable from the position domain to solid angle domain
@@ -56,5 +56,41 @@ private:
     Color3f m_radiance;
 };
 
+
+/// point light 
+class PointLight : public Light {
+public:
+	PointLight(const PropertyList &propList) {
+		m_position = propList.getPoint("position", Point3f(0.f));
+		m_power = propList.getColor("power", Color3f(1.f));
+	}
+
+    Color3f sample(LightQueryRecord &lRec, Sampler *sampler, const Mesh *mesh) const override {
+		lRec.wi = (m_position - lRec.ref).normalized();
+		lRec.p = m_position;
+		lRec.pdf = 1.f;
+		lRec.shadowRay = Ray3f(lRec.ref, lRec.wi, Epsilon, (m_position - lRec.ref).norm() - Epsilon);
+		return m_power / (4.f * M_PI * (m_position - lRec.ref).squaredNorm());
+	}
+
+	Color3f eval(const LightQueryRecord &lRec) const override {
+		return m_power / (4.f * M_PI * (m_position - lRec.ref).squaredNorm());
+	}
+
+    float pdf(const LightQueryRecord &lRec, const Mesh *mesh) const override {
+		return 1.f;
+	}
+
+	virtual std::string toString() const {
+		return "PointLight[]";
+	}
+
+private:
+	Color3f m_power;
+	Point3f m_position;
+};
+
+
 KAZEN_REGISTER_CLASS(AreaLight, "area")
+KAZEN_REGISTER_CLASS(PointLight, "point")
 NAMESPACE_END(kazen)
