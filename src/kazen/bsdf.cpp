@@ -627,6 +627,10 @@ public:
         m_anisotropy = propList.getFloat("anisotropy", 0.f);
     }
 
+    ~GGX() {
+        if(!m_albedo) delete m_albedo;
+    }
+
     Color3f eval(const BSDFQueryRecord &bRec) const {
         if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
             return Color3f(0.0f);        
@@ -950,8 +954,6 @@ private:
 class KazenStandardSurface : public BSDF {
 public:
     KazenStandardSurface(const PropertyList &proplist) {
-        m_roughness = proplist.getFloat("roughness", 0.5f);
-        m_metallic = proplist.getFloat("metallic", 0.0f);
         m_anisotropy = proplist.getFloat("anisotropy", 0.0f);
         m_specular = proplist.getFloat("specular", 0.5f);
         m_specularTint = proplist.getFloat("specularTint", 0.5f); 
@@ -959,6 +961,12 @@ public:
         m_clearcoatRoughness = proplist.getFloat("clearcoatRoughness", 0.5f);               
         m_sheen = proplist.getFloat("sheen", 0.0f);
         m_sheenTint = proplist.getFloat("sheenTint", 0.5);
+    }
+
+    ~KazenStandardSurface() {
+        if(!m_baseColor) delete m_baseColor;
+        if(!m_metallic) delete m_metallic;
+        if(!m_roughness) delete m_roughness;
     }
 
     float schlickWeight(float x) const {
@@ -987,10 +995,12 @@ public:
 
         // color 
         Color3f Cdlin = m_baseColor->eval(bRec.uv);
+        auto metallic = m_metallic->eval(bRec.uv).r(); // TODO: single channel?
+        auto roughness = m_roughness->eval(bRec.uv).r();
         float Cdlum = Cdlin.getLuminance();
         Color3f Ctint = Cdlum > 0.f ? Cdlin/Cdlum : Color3f(1.f);
 		Color3f Ctintmix = .08 * m_specular * lerp(Color3f(1.f), Ctint, m_specularTint);
-		Color3f Cspec0 = lerp(Ctintmix, Cdlin, m_metallic);
+		Color3f Cspec0 = lerp(Ctintmix, Cdlin, metallic);
 
         // diffuse
         float FL = schlickWeight(L.z());
@@ -998,10 +1008,10 @@ public:
         float FH = schlickWeight(L.dot(H));
 
         float cosThetaD = V.dot(H);
-        float FD90 = 0.5f * 2 * m_roughness * cosThetaD * cosThetaD;
+        float FD90 = 0.5f * 2 * roughness * cosThetaD * cosThetaD;
 
         float Lambert = (1.f - 0.5f*FL) * (1.f - 0.5f*FV);
-        float RR = 2.f * m_roughness * cosThetaD * cosThetaD;
+        float RR = 2.f * roughness * cosThetaD * cosThetaD;
         float retro_reflection = RR * (FL + FV + FL * FV * (RR - 1.f));
 
         // sheen
@@ -1010,13 +1020,13 @@ public:
 
         // specular
         Color3f F;
-        Color3f specTerm = evaluateGGXSmithBRDF(V, L, Cspec0, m_roughness, m_anisotropy, F);         
+        Color3f specTerm = evaluateGGXSmithBRDF(V, L, Cspec0, roughness, m_anisotropy, F);         
 
         // clearcoat(ior = 1.5 -> F0 = 0.04)
         float clearcoatRoughness = math::lerp(m_clearcoatRoughness, .01f, .3f);
         Color3f clearcoatTerm = 0.25f * m_clearcoat * evaluateGGXSmithBRDF(V, L, 0.04f, clearcoatRoughness, m_anisotropy, F);       
 
-        return ((1.f-m_metallic)*(Cdlin * INV_PI * (Lambert + retro_reflection) +  Fsheen) +
+        return ((1.f-metallic)*(Cdlin * INV_PI * (Lambert + retro_reflection) +  Fsheen) +
                 specTerm + clearcoatTerm)* Frame::cosTheta(bRec.wo);
     }
 
@@ -1027,14 +1037,16 @@ public:
             return 0.0f;
 
         // weight: reference - http://simon-kallweit.me/rendercompo2015/report/
-        float diffuse = (1.f - m_metallic) * 0.5f;
+        auto metallic = m_metallic->eval(bRec.uv).r();
+        float diffuse = (1.f - metallic) * 0.5f;
         float GTR2 = 1.f / (1.f + m_clearcoat);
 
         auto H = (bRec.wi + bRec.wo).normalized();
         auto jacobian = 4.0f * bRec.wi.dot(H);
         
         // specular 
-        auto alpha = roughnessToAlpha(m_roughness, m_anisotropy);
+        auto roughness = m_roughness->eval(bRec.uv).r();
+        auto alpha = roughnessToAlpha(roughness, m_anisotropy);
         auto specPdf = computeGGXSmithPDF(bRec.wi, H, alpha) / jacobian;
 
         // clearcoat
@@ -1054,7 +1066,8 @@ public:
         /* Relative index of refraction: no change */
         bRec.eta = 1.0f;
 
-        float diffuse = (1.f - m_metallic) * 0.5f;
+        auto metallic = m_metallic->eval(bRec.uv).r();
+        float diffuse = (1.f - metallic) * 0.5f;
 
 		if (_sample.x() < diffuse) {
             auto sample = Point2f(_sample.x()/diffuse, _sample.y());
@@ -1068,7 +1081,8 @@ public:
             bool flip = bRec.wi.z() <= 0.f;
             if (sample.x() < GTR2) {
                 sample1 = Point2f(sample.x() / GTR2, sample.y());
-                Vector2f alpha = roughnessToAlpha(m_roughness, m_anisotropy);
+                auto roughness = m_roughness->eval(bRec.uv).r();
+                Vector2f alpha = roughnessToAlpha(roughness, m_anisotropy);
                 H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample1);
             } else {
                 sample1 = Point2f((sample.x()-GTR2) / (1.f-GTR2), sample.y());
@@ -1091,7 +1105,21 @@ public:
     void addChild(Object *obj) override {
         switch (obj->getClassType()) {
             case ETexture:
-                m_baseColor = static_cast<Texture<Color3f>*>(obj);
+                if( obj->getId() == "baseColor" ) {
+                    if (m_baseColor)
+                        throw Exception("There is already an baseColor defined!");
+                    m_baseColor = static_cast<Texture<Color3f> *>(obj);
+                }
+                else if ( obj->getId() == "metallic" ) {
+                    if (m_metallic)
+                        throw Exception("There is already an metallic defined!");
+                    m_metallic = static_cast<Texture<Color3f> *>(obj);
+                }  
+                else if ( obj->getId() == "roughness" ) {
+                    if (m_roughness)
+                        throw Exception("There is already an roughness defined!");
+                    m_roughness = static_cast<Texture<Color3f> *>(obj);
+                }       
                 break;
             default:
                 throw Exception("addChild is not supported other than baseColor maps");
@@ -1106,8 +1134,8 @@ public:
 
 private:
     Texture<Color3f>* m_baseColor=nullptr;
-    float m_roughness;
-    float m_metallic;
+    Texture<Color3f>* m_roughness=nullptr;
+    Texture<Color3f>* m_metallic=nullptr;
     float m_anisotropy;
     float m_specular;
     float m_specularTint;
