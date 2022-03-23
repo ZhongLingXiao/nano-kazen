@@ -145,7 +145,6 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
         uint32_t idx0 = F(0, f), idx1 = F(1, f), idx2 = F(2, f);
 
         Point3f p0 = V.col(idx0), p1 = V.col(idx1), p2 = V.col(idx2);
-        Point2f uv0 = UV.col(idx0), uv1 = UV.col(idx1), uv2 = UV.col(idx2);
 
         /* Compute the intersection positon accurately
            using barycentric coordinates */
@@ -153,12 +152,15 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
 
         /* Compute proper texture coordinates if provided by the mesh */
         if (UV.size() > 0)
-            its.uv = bary.x() * uv0 + bary.y() * uv1 + bary.z() * uv2;
+            its.uv = bary.x() * UV.col(idx0) + 
+                     bary.y() * UV.col(idx1) + 
+                     bary.z() * UV.col(idx2);
 
         /* Compute the geometry frame */
         its.geoFrame = Frame((p1-p0).cross(p2-p0).normalized());
         
         if (N.size() > 0 && UV.size() > 0) {
+            Point2f uv0 = UV.col(idx0), uv1 = UV.col(idx1), uv2 = UV.col(idx2);
             Vector3f dP1=p1-p0, dP2=p2-p0;
             Point2f dUV1=uv1-uv0, dUV2=uv2-uv0;
 
