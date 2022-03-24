@@ -114,7 +114,7 @@ Vector3f sampleGGXSmithVNDF(Vector3f V, Vector2f alpha, const Point2f &random) {
     Vector3f Nh = t1 * T1 + t2 * T2 + std::sqrt(std::max(0.0f, 1.0f - t1 * t1 - t2 * t2)) * Vh;
 
     // Section 3.4: Transform the normal back to the ellipsoid configuration.
-    Vector3f H = Vector3f(alpha.x() * Nh.x(), alpha.y() * Nh.y(), std::max(0.0f, Nh.z())).normalized();
+    Vector3f H = Vector3f(alpha.x() * Nh.x(), alpha.y() * Nh.y(), std::max(1e-6f, Nh.z())).normalized();
 
     return H;
 }

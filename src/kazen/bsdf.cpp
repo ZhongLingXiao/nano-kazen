@@ -1028,6 +1028,7 @@ public:
 
         return ((1.f-metallic)*(Cdlin * INV_PI * (Lambert + retro_reflection) +  Fsheen) +
                 specTerm + clearcoatTerm)* Frame::cosTheta(bRec.wo);
+
     }
 
     float pdf(const BSDFQueryRecord &bRec) const override {
@@ -1050,18 +1051,14 @@ public:
         auto specPdf = computeGGXSmithPDF(bRec.wi, H, alpha) / jacobian;
 
         // clearcoat
-        auto alphacoat = roughnessToAlpha(math::lerp(m_clearcoatRoughness, .01f, .3f), 0.f);
-        float clearcoatPdf = computeGGXSmithPDF(bRec.wi, H, alphacoat) / jacobian;
+        auto coatalpha = roughnessToAlpha(math::lerp(m_clearcoatRoughness, .01f, .3f), 0.f);
+        float clearcoatPdf = computeGGXSmithPDF(bRec.wi, H, coatalpha) / jacobian;
 
         return diffuse * INV_PI * Frame::cosTheta(bRec.wo) +
                 (1.f-diffuse) * (GTR2*specPdf + (1.f-GTR2)*clearcoatPdf);  
-    
     }
 
     Color3f sample(BSDFQueryRecord &bRec, const Point2f &_sample) const override {
-        if (Frame::cosTheta(bRec.wi) <= 0)
-            return Color3f(0.0f);
-
         bRec.measure = ESolidAngle;
         /* Relative index of refraction: no change */
         bRec.eta = 1.0f;
@@ -1070,6 +1067,8 @@ public:
         float diffuse = (1.f - metallic) * 0.5f;
 
 		if (_sample.x() < diffuse) {
+            if (Frame::cosTheta(bRec.wi) <= 0)
+                return Color3f(0.0f);
             auto sample = Point2f(_sample.x()/diffuse, _sample.y());
             bRec.wo = Warp::squareToCosineHemisphere(sample);
 		} else {
@@ -1087,7 +1086,6 @@ public:
             } else {
                 sample1 = Point2f((sample.x()-GTR2) / (1.f-GTR2), sample.y());
                 Vector2f alpha = roughnessToAlpha(math::lerp(m_clearcoatRoughness, 0.01f, .3f), 0.f);
-                bool flip   = bRec.wi.z() <= 0.0f;
                 H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample1);
             }
             H = flip ? -H : H;
@@ -1095,11 +1093,15 @@ public:
             bRec.wo = reflect(bRec.wi, H).normalized();
 		}
 
-        if (Frame::cosTheta(bRec.wo) <= 0)
+        auto invalid = [&]() {
+            return std::isnan(bRec.wo.x()) || std::isnan(bRec.wo.y()) || std::isnan(bRec.wo.z());
+        };
+
+        if (Frame::cosTheta(bRec.wo) <= 0 || pdf(bRec) <= Epsilon || invalid())
             return Color3f(0.f);
 
 		// return eval(bRec) / pdf(bRec) * Frame::cosTheta(bRec.wo);
-		return eval(bRec) / pdf(bRec);
+        return eval(bRec) / pdf(bRec);
     }
 
     void addChild(Object *obj) override {
