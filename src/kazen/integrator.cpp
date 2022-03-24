@@ -217,7 +217,7 @@ public:
                getting stuck (e.g. due to total internal reflection) */
             if (depth >= 3) {
                 // continuation probability
-                auto probability = std::min(throughput.maxCoeff()*eta*eta, 0.99f);
+                auto probability = std::min(throughput.maxCoeff()*eta*eta, 0.95f);
                 if (probability <= sampler->next1D()) {
                     break;
                 }
@@ -259,6 +259,7 @@ public:
             ray = Ray3f(its.p, its.toWorld(bRec.wo));
             auto bsdfPdf = its.mesh->getBSDF()->pdf(bRec);
             if (!scene->rayIntersect(ray, its)) {
+                Li += throughput * scene->getBackgroundColor();
                 break;
             }
 

@@ -124,7 +124,7 @@ private:
     Sampler *m_sampler = nullptr;
     Camera *m_camera = nullptr;
     Accel *m_accel = nullptr;
-    Color3f m_backgroundColor = Color3f(0.f);
+    Color3f m_backgroundColor = Color3f(0.05f);
 };
 
 NAMESPACE_END(kazen)
