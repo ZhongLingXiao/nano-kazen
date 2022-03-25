@@ -7,7 +7,9 @@ NAMESPACE_BEGIN(kazen)
 class AreaLight : public Light {
 public:
     AreaLight(const PropertyList &propList) {
-        m_radiance = propList.getColor("radiance");
+        m_color = propList.getColor("color", Color3f(1.f));
+        m_intensity = propList.getFloat("intensity", 1.f);
+        m_radiance = m_intensity*m_color;
     }
 
     Color3f eval(const LightQueryRecord &lRec) const override {
@@ -54,6 +56,8 @@ public:
 
 private:
     Color3f m_radiance;
+    Color3f m_color;
+    float m_intensity;
 };
 
 
