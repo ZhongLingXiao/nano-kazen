@@ -43,6 +43,8 @@ public:
     /// Return a random light mesh
     Mesh *getRandomLight(float rnd) const {         
         auto const & n = m_lights.size();
+        if (n == 0)
+            return nullptr;
         size_t index = std::min(
                 static_cast<size_t>(std::floor(n*rnd)),
                 n-1);

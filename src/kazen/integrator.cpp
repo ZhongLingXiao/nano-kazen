@@ -226,25 +226,27 @@ public:
 
             /* ----------------------- Light sampling ----------------------- */
             const Mesh* mesh = scene->getRandomLight(sampler->next1D());
-            const Light* light = mesh->getLight();
-            LightQueryRecord lRec(its.p);
-            lRec.uv = its.uv;
-            Color3f Ls = light->sample(lRec, sampler, mesh) / scene->getLightPdf();
-           
-            auto lightPdf = light->pdf(lRec, mesh);
-            if (!scene->rayIntersect(lRec.shadowRay)) {
+            if (mesh) {
+                const Light* light = mesh->getLight();
+                LightQueryRecord lRec(its.p);
+                lRec.uv = its.uv;
+                Color3f Ls = light->sample(lRec, sampler, mesh) / scene->getLightPdf();
+            
+                auto lightPdf = light->pdf(lRec, mesh);
+                if (!scene->rayIntersect(lRec.shadowRay)) {
 
-                /* Query the BSDF for that emitter-sampled direction */
-                BSDFQueryRecord bRec(its.toLocal(-ray.d), its.toLocal(lRec.wi), ESolidAngle);
-                bRec.its = its;
-                bRec.uv = its.uv;
-                Color3f f = its.mesh->getBSDF()->eval(bRec);
+                    /* Query the BSDF for that emitter-sampled direction */
+                    BSDFQueryRecord bRec(its.toLocal(-ray.d), its.toLocal(lRec.wi), ESolidAngle);
+                    bRec.its = its;
+                    bRec.uv = its.uv;
+                    Color3f f = its.mesh->getBSDF()->eval(bRec);
 
-                /* Determine density of sampling that same direction using BSDF sampling */
-                auto bsdfPdf = its.mesh->getBSDF()->pdf(bRec);
+                    /* Determine density of sampling that same direction using BSDF sampling */
+                    auto bsdfPdf = its.mesh->getBSDF()->pdf(bRec);
 
-                auto lightWeight = powerHeuristic(lightPdf, bsdfPdf);
-                Li += throughput * Ls * f  * lightWeight;
+                    auto lightWeight = powerHeuristic(lightPdf, bsdfPdf);
+                    Li += throughput * Ls * f  * lightWeight;
+                }
             }
 
             /* ----------------------- BSDF sampling ----------------------- */
