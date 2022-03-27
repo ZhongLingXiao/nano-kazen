@@ -7,10 +7,10 @@
 NAMESPACE_BEGIN(kazen)
 
 enum BSDFFlag {
-    Unset = 0,
-    Reflection = 1 << 0,
-    Transmission = 1 << 1,
-    All = Reflection | Transmission
+    BSDF_Unset = 0,
+    BSDF_Diffuse = 1 << 0,
+    BSDF_Reflection = 1 << 1,
+    BSDF_All = BSDF_Diffuse | BSDF_Reflection
 };
 
 /**
@@ -34,7 +34,7 @@ struct BSDFQueryRecord {
     EMeasure measure;
 
     /// Flags associated with the sample
-    BSDFFlag flag;
+    BSDFFlag flag = BSDFFlag::BSDF_All;
 
     /// pdf associated with the sample
     float pdf;

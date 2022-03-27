@@ -999,7 +999,7 @@ public:
         auto roughness = m_roughness->eval(bRec.uv).r();
         float Cdlum = Cdlin.getLuminance();
         Color3f Ctint = Cdlum > 0.f ? Cdlin/Cdlum : Color3f(1.f);
-		Color3f Ctintmix = .08 * m_specular * lerp(Color3f(1.f), Ctint, m_specularTint);
+		Color3f Ctintmix = 0.08f * m_specular * lerp(Color3f(1.f), Ctint, m_specularTint);
 		Color3f Cspec0 = lerp(Ctintmix, Cdlin, metallic);
 
         // diffuse
@@ -1027,7 +1027,7 @@ public:
         Color3f clearcoatTerm = 0.25f * m_clearcoat * evaluateGGXSmithBRDF(V, L, 0.04f, clearcoatRoughness, m_anisotropy, F);       
 
         return ((1.f-metallic)*(Cdlin * INV_PI * (Lambert + retro_reflection) +  Fsheen) +
-                specTerm + clearcoatTerm)* Frame::cosTheta(bRec.wo);
+                (specTerm + clearcoatTerm))* Frame::cosTheta(bRec.wo);
 
     }
 
@@ -1040,6 +1040,7 @@ public:
         // weight: reference - http://simon-kallweit.me/rendercompo2015/report/
         auto metallic = m_metallic->eval(bRec.uv).r();
         float diffuse = (1.f - metallic) * 0.5f;
+        // float diffuse =  m_baseColor->eval(bRec.uv).maxCoeff();
         float GTR2 = 1.f / (1.f + m_clearcoat);
 
         auto H = (bRec.wi + bRec.wo).normalized();
@@ -1059,16 +1060,18 @@ public:
     }
 
     Color3f sample(BSDFQueryRecord &bRec, const Point2f &_sample) const override {
+        if (Frame::cosTheta(bRec.wi) <= 0)
+            return Color3f(0.0f);
+
         bRec.measure = ESolidAngle;
         /* Relative index of refraction: no change */
         bRec.eta = 1.0f;
 
         auto metallic = m_metallic->eval(bRec.uv).r();
         float diffuse = (1.f - metallic) * 0.5f;
+        // float diffuse = m_baseColor->eval(bRec.uv).maxCoeff();
 
 		if (_sample.x() < diffuse) {
-            if (Frame::cosTheta(bRec.wi) <= 0)
-                return Color3f(0.0f);
             auto sample = Point2f(_sample.x()/diffuse, _sample.y());
             bRec.wo = Warp::squareToCosineHemisphere(sample);
 		} else {

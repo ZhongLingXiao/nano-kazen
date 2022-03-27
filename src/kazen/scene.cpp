@@ -51,6 +51,22 @@ void Scene::activate() {
     // cout << endl;
 }
 
+const Color3f Scene::getBackgroundColor(const Vector3f &dir) const {
+    if (!m_background)
+        return Color3f(0.f);
+    
+    const Point2f uv = sphericalCoordinates(dir);  
+    auto invalid = [&]() {
+        return std::isnan(dir.x()) || std::isnan(dir.y()) || std::isnan(dir.z()) ||
+            std::isnan(uv.x()) || std::isnan(uv.y());
+    };    
+    
+    if (invalid())
+        return Color3f(0.f);
+
+    return m_background->eval(uv);
+}
+
 void Scene::addChild(Object *obj) {
     switch (obj->getClassType()) {
         case EMesh: {
@@ -85,6 +101,13 @@ void Scene::addChild(Object *obj) {
             m_integrator = static_cast<Integrator *>(obj);
             break;
 
+        case ETexture:
+            if( obj->getId() == "background" ) {
+                if (m_background)
+                    throw Exception("There is already an baseColor defined!");
+                m_background = static_cast<Texture<Color3f> *>(obj);
+            }
+            break;
         default:
             throw Exception("Scene::addChild(<{}>) is not supported!",
                 classTypeName(obj->getClassType()));

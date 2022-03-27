@@ -4,11 +4,6 @@
 
 NAMESPACE_BEGIN(kazen)
 
-enum ETextureType {
-    EDefault = 0,
-    EMask,
-    ETextureTypeCount
-};
 
 template<typename T>
 class Texture : public Object {
@@ -22,7 +17,6 @@ public:
      * */
     EClassType getClassType() const { return ETexture; }
 
-    virtual ETextureType getTextureType() const { return ETextureType::EDefault; }
 };
 
 

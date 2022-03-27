@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kazen/accel.h>
+#include <kazen/texture.h>
 
 NAMESPACE_BEGIN(kazen)
 
@@ -59,7 +60,7 @@ public:
     size_t getNumLights() const { return m_lights.size(); }
 
     /// Return background color
-    const Color3f getBackgroundColor() const { return m_backgroundColor; }
+    const Color3f getBackgroundColor(const Vector3f &dir) const;
 
     /**
      * \brief Intersect a ray against all triangles stored in the scene
@@ -126,7 +127,9 @@ private:
     Sampler *m_sampler = nullptr;
     Camera *m_camera = nullptr;
     Accel *m_accel = nullptr;
-    Color3f m_backgroundColor = Color3f(0.05f);
+    Texture<Color3f> *m_background = nullptr;
+    // Color3f m_backgroundColor = Color3f(0.05f);
+
 };
 
 NAMESPACE_END(kazen)

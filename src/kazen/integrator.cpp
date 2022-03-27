@@ -183,7 +183,10 @@ public:
 // Next Event Estimation(NEE) with multiple importance sampling(MIS)
 class PathMisIntegrator : public Integrator {
 public:
-    PathMisIntegrator(const PropertyList &propList) {}
+    PathMisIntegrator(const PropertyList &propList) {
+        // system support 512 max bounces
+        m_maxDepth = std::min(512, propList.getInteger("maxDepth", 5));
+    }
 
     Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &ray_) const {
         Ray3f ray = ray_;
@@ -202,8 +205,8 @@ public:
         }
     
         /* Tracks depth for Russian roulette */
-        int depth = 1;
-        while (true) {
+        int depth = 0;
+        while (depth < m_maxDepth) {
             /* ----------------------- Intersection with lights ----------------------- */
             if (its.mesh->isLight()) {
                 LightQueryRecord lRec(ray.o, its.p, its.shFrame.n);
@@ -217,7 +220,7 @@ public:
                getting stuck (e.g. due to total internal reflection) */
             if (depth >= 3) {
                 // continuation probability
-                auto probability = std::min(throughput.maxCoeff()*eta*eta, 0.95f);
+                auto probability = std::min(throughput.maxCoeff()*eta*eta, 0.99f);
                 if (probability <= sampler->next1D()) {
                     break;
                 }
@@ -261,7 +264,7 @@ public:
             ray = Ray3f(its.p, its.toWorld(bRec.wo));
             auto bsdfPdf = its.mesh->getBSDF()->pdf(bRec);
             if (!scene->rayIntersect(ray, its)) {
-                Li += throughput * scene->getBackgroundColor();
+                // Li += throughput * scene->getBackgroundColor(ray.d);
                 break;
             }
 
@@ -291,9 +294,12 @@ public:
         return pdfA > 0.f ? pdfA/(pdfA + pdfB): 0.f;
     }
 
-  std::string toString() const {
-      return "PathMisIntegrator[]";
-  }
+    std::string toString() const {
+        return "PathMisIntegrator[]";
+    }
+
+private:
+    int m_maxDepth;
 };
 
 

@@ -78,6 +78,44 @@ private:
 
 /// TODO: remove all the following code
 
+/// background texture
+class BackgroundTexture : public Texture<Color3f> {
+public:
+    BackgroundTexture(const PropertyList &propList) {
+        m_intensity= propList.getFloat("intensity", 1.0f);
+    }
+
+    ~BackgroundTexture() {
+        if (m_nested) delete m_nested;
+    }
+
+    Color3f eval(const Point2f &uv) const override { 
+        if (m_nested) {
+            return m_intensity * m_nested->eval(uv);  
+        }         
+        return Color3f(0.f);
+    } 
+
+    void addChild(Object *obj) override {
+        switch (obj->getClassType()) {
+            case ETexture:
+                m_nested = static_cast<Texture<Color3f>*>(obj);
+                break;
+            default:
+                throw Exception("addChild is not supported other than nested Texture");
+        }
+    }
+
+    std::string toString() const {
+        return fmt::format("Background[]");
+    }
+
+private:
+    float m_intensity;
+    Texture<Color3f>* m_nested = nullptr; 
+};
+
+
 /// color ramp texture
 class ColorRampTexture : public Texture<Color3f> {
 public:
@@ -205,6 +243,7 @@ private:
 
 KAZEN_REGISTER_CLASS(ConstantTexture, "constanttexture");
 KAZEN_REGISTER_CLASS(ImageTexture, "imagetexture");
+KAZEN_REGISTER_CLASS(BackgroundTexture, "background");
 KAZEN_REGISTER_CLASS(ColorRampTexture, "colorramp");
 KAZEN_REGISTER_CLASS(BlendTexture, "blend");
 
