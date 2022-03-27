@@ -1151,17 +1151,40 @@ Frame getFrame(const Intersection &its, Vector3f wi) const {
 
 
 
+------
 
 
 
+`2022.3.26`**light path**
+
+blender 中有这种现象，材质只有 diffuse 部分能被照亮，specular 部分无法被某些光源照亮。
+
+做法是通过一种叫做 light path 的方式把光源过滤出来。
+
+这种光源的好处是：可以 filter 掉高光，类似偏振光的感觉
+
+如果想达到同样的效果，设置 ray 的类型？
 
 
 
+------
 
 
 
+`2022.3.27`**Integrator 中的 maxDepth 可以有效去除掉一些 firefly**
 
+这种 maxDepth 参数非常好用，可以有效避免边角处的反复弹射，出现那种过分的色溢效果。
 
+但这种强制截断光路，而不是通过 russian roulette 的方式会导致结果有偏差。这个还需要后面看其它渲染器的做法。
+
+其中对于 maxDepth ：
+
+- 支持
+  - pbrt
+  - cycles
+- 不支持
+  - mitsuba2
+  - nori
 
 
 
