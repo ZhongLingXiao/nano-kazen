@@ -189,8 +189,8 @@ public:
 
         if (m_blendmode == "mix") {
             return Color3f( math::lerp(mask.x(), input1.x(), input2.x()),
-                            math::lerp(mask.y(), input1.y(), input2.y()),
-                            math::lerp(mask.z(), input1.z(), input2.z()));
+                            math::lerp(mask.x(), input1.y(), input2.y()),
+                            math::lerp(mask.x(), input1.z(), input2.z()));
         }
         else if (m_blendmode == "multiply") {        
             return Color3f( input1.x()*input2.x(),
