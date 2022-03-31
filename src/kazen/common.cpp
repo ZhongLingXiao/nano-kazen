@@ -452,8 +452,8 @@ static OIIO::TextureSystem *ts = nullptr;
 OIIO::TextureSystem *getTextureSystem() {
     if (!ts) {
         ts = OIIO::TextureSystem::create(true);
-        int maxfiles = 50;
-        int maxMemoryMB = 1024.0f;
+        int maxfiles = 1000;
+        int maxMemoryMB = 10240.0f;
         ts->attribute ("max_open_files", maxfiles);
         ts->attribute ("max_memory_MB", maxMemoryMB);
     }

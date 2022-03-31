@@ -212,6 +212,7 @@ public:
                 LightQueryRecord lRec(ray.o, its.p, its.shFrame.n);
                 lRec.uv = its.uv;
                 Li += bsdfWeight * throughput * its.mesh->getLight()->eval(lRec);
+                break;
             }
       
             /* Russian roulette: try to keep path weights equal to one,
@@ -264,7 +265,7 @@ public:
             ray = Ray3f(its.p, its.toWorld(bRec.wo));
             auto bsdfPdf = its.mesh->getBSDF()->pdf(bRec);
             if (!scene->rayIntersect(ray, its)) {
-                // Li += throughput * scene->getBackgroundColor(ray.d);
+                Li += throughput * scene->getBackgroundColor(ray.d);
                 break;
             }
 
