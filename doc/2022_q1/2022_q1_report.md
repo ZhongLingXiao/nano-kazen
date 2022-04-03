@@ -67,10 +67,9 @@ float ratioGGX = 1.0f / (1.0f + clearcoat);
 
 
 For materials with no clearcoat, samples are only sampled using the GGX distribution, for materials with 100% clearcoat, 1/2 the samples are directed to either of the distributions.
+	
 <br>
 
-
-------
 
 These following images shows material parameters support by **KISS**:
 
