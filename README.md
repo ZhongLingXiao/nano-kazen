@@ -10,6 +10,7 @@
 ## 1. KISS PBR shading model
 
 ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/final_3.4h_4k_10000spp.png "Figure 1: 3840x2160 | 10000 spp | 3.4 h")
+<div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 1: 3840x2160 | 10000 spp | 3.4 h</center></div><br>
 
 **Core Feature**
 
