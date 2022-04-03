@@ -1192,11 +1192,34 @@ blender 中有这种现象，材质只有 diffuse 部分能被照亮，specular 
 
 
 
+------
 
 
 
+`2022.4.3`**顺利完成 kazen con 2022 Q1**
+
+https://github.com/ZhongLingXiao/nano-kazen
+
+https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/2022_q1_report.md
 
 
+
+开始思考下一阶段开发计划
+
+- [ ] 光源完善 ：hdr ，点，面
+- [ ] 更好的 sampler ：mmp 最喜欢的 `sampler 0-2 pmj bn`
+- [ ] bsdf 完善 : brdf ==> bsdf。
+- [ ] 微分部分 : 法线微分（bump_map），贴图微分(dtdx, dsdx, dtdy, dsdy)
+- [ ] uv mapping / 多个 uv sets
+- [ ] ref 文件
+- [ ] blender 插件方便快速迭代
+- [ ] 加分项：
+  - [ ] realistic camera
+  - [ ] vol_path : 体积渲染及 sss
+  - [ ] 颜色 ocio
+
+> 目标：更快的性能；更好的表现力；更舒适的工作流。可量化
+>
 
 
 
