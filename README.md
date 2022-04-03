@@ -9,9 +9,7 @@
 
 ## 1. KISS PBR shading model
 
-![](.\doc\2022_q1\img\final_cover.jpg)
-
-<center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 1: 3840x2160 | 10000 spp | 3.4 h</center>
+![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/final_3.4h_4k_10000spp.png "Figure 1: 3840x2160 | 10000 spp | 3.4 h")
 
 **Core Feature**
 
@@ -28,4 +26,4 @@
 7. Camera : Perspective | Thin Lens
 8. Light : mesh light, basic environment ( Blinn/Newell Latitude Mapping )
 
-[See the full kazen-2022-q1 report](.\doc\2022_q1\2022_q1_report.md)
+[See the full kazen-2022-q1 report](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/2022_q1_report.md)
