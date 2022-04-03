@@ -51,6 +51,6 @@
 
 [10] [Embree 3: High Performance Ray Tracing](https://www.embree.org/) **Intel**
 
-[11] [OpenImageIO: a library for reading and writing images, and a bunch of related classes, utilities, and applications](https://sites.google.com/site/openimageio/home) **Larry Gritz**
+[11] [OpenImageIO](https://sites.google.com/site/openimageio/home) **Larry Gritz**
 
 [12] [Greyscalegorilla: modern surface material collection](https://greyscalegorilla.com/product/modern-surface-material-collection/) **Greyscalegorilla**. 2021
