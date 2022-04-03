@@ -1171,9 +1171,11 @@ blender 中有这种现象，材质只有 diffuse 部分能被照亮，specular 
 
 
 
-`2022.3.27`**Integrator 中的 maxDepth 可以有效去除掉一些 firefly**
+`2022.3.27`**有关 firefly 的一些思考**
 
-这种 maxDepth 参数非常好用，可以有效避免边角处的反复弹射，出现那种过分的色溢效果。
+**1. Integrator 中的 maxDepth 可以有效去除掉一些 firefly** 
+
+这种 `maxDepth` 参数非常好用，可以有效避免边角处的反复弹射，出现那种过分的色溢效果。
 
 但这种强制截断光路，而不是通过 russian roulette 的方式会导致结果有偏差。这个还需要后面看其它渲染器的做法。
 
@@ -1186,7 +1188,7 @@ blender 中有这种现象，材质只有 diffuse 部分能被照亮，specular 
   - mitsuba2
   - nori
 
-
+**2. 我们的 `block.put()` 函数其实已经帮我们 filter 掉了一些负值和 NaN 的情况**
 
 
 

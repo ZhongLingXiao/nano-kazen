@@ -1,0 +1,97 @@
+<?xml version="1.0" ?>
+<scene>
+	<integrator type="path_mis"/>
+	<sampler type="independent">
+		<integer name="sampleCount" value="4096"/>
+	</sampler>
+	<camera type="perspective">
+		<float name="fov" value="35.48934190849526"/>
+		<float name="nearClip" value="0.10000000149011612"/>
+		<float name="farClip" value="100.0"/>
+		<integer name="width" value="1920"/>
+		<integer name="height" value="1080"/>
+		<transform name="toWorld">
+			<matrix value="-1.0,0.0,0.0,0.0,0.0,0.9961947202682495,-0.08715580403804779,1.899999976158142,0.0,-0.08715580403804779,-0.9961947202682495,9.0,0.0,0.0,0.0,1.0"/>
+		</transform>
+	</camera>
+
+	<!--
+	<texture type="background" id="background">
+		<float name="intensity" value="0.0"/>
+			<texture type="constanttexture">
+				<color name="color" value="1.0 1.0 1.0"/>
+			</texture>
+	</texture>
+
+	<mesh type="obj">
+		<string name="filename" value="meshes/Light_front.obj"/>
+		<light type="area">
+			<color name="color" value="1.0 1.0 1.0"/>
+			<float name="intensity" value="1"/>
+			<integer name="type" value="1"/>
+		</light>
+	</mesh>
+	-->
+	<mesh type="obj">
+		<string name="filename" value="meshes/Light_back.obj"/>
+		<light type="area">
+			<color name="color" value="1.0 1.0 1.0"/>
+			<float name="intensity" value="1.0"/>
+		</light>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Light_right.obj"/>
+		<light type="area">
+			<color name="color" value="1.0 1.0 1.0"/>
+			<float name="intensity" value="1.5"/>
+		</light>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Light_left.obj"/>
+		<light type="area">
+			<color name="color" value="1.0 1.0 1.0"/>
+			<float name="intensity" value="4.0"/>
+		</light>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Backdrop.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="1.0,1.0,1.0"/>
+		</bsdf>
+	</mesh>
+	
+	<mesh type="obj">
+		<string name="filename" value="meshes/PlaceHolder_Object.obj"/>
+		<!--	
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.75,0.75,0.75"/>
+			<color name="color" value="0.715 0.429 0.0"/>
+			<color name="color" value="0.004 0.048 0.701"/>
+			<color name="color" value="0.011612 0.152926 0.73"/>
+			<color name="color" value="0.776 0.098 0.019"/>
+			<color name="color" value="0.871 0.376 0.0"/>
+			<color name="color" value="0.059511 0.074214 0.132868"/>
+			<color name="color" value="0.0865 0.048172 0.234551"/>
+		</bsdf>			
+		
+		-->
+		<bsdf type="kazenstandard">
+			<texture type="constanttexture" id="baseColor">
+				<color name="color" value="0.0865 0.048172 0.234551"/>
+			</texture>
+			<texture type="constanttexture" id="roughness">
+				<color name="color" value="0.0 0.0 0.0"/>
+			</texture>
+			<texture type="constanttexture" id="metallic">
+				<color name="color" value="0.0 0.0 0.0"/>
+			</texture>
+			<float name="anisotropy" value="0.0"/>
+			<float name="specular" value="0.5"/>
+			<float name="specularTint" value="0.0"/>
+			<float name="clearcoat" value="0.0"/>
+			<float name="clearcoatRoughness" value="0.0"/>
+			<float name="sheen" value="0.5"/>
+			<float name="sheenTint" value="0.0"/>
+		</bsdf>
+	</mesh>
+</scene>

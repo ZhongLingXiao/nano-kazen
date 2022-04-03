@@ -1,0 +1,56 @@
+<?xml version="1.0" ?>
+<scene>
+	<integrator type="path_mis"/>
+	<sampler type="independent">
+		<integer name="sampleCount" value="40"/>
+	</sampler>
+	<camera type="perspective">
+		<float name="fov" value="49.13434207760448"/>
+		<float name="nearClip" value="0.10000000149011612"/>
+		<float name="farClip" value="100.0"/>
+		<integer name="width" value="1920"/>
+		<integer name="height" value="1080"/>
+		<transform name="toWorld">
+			<matrix value="4.371138828673793e-08,-4.371138828673793e-08,1.0,-4.857681751251221,0.0,1.0,4.371138828673793e-08,0.9879673719406128,-1.0,-1.910685676922942e-15,4.371138828673793e-08,0.0,0.0,0.0,0.0,1.0"/>
+		</transform>
+		<rfilter type="mitchell">
+			<float name="radius" value="2.0"/>
+		</rfilter>
+	</camera>
+	<mesh type="obj">
+		<string name="filename" value="meshes/REPLACE ME.obj"/>
+		<bsdf type="kazenstandard">
+			<texture type="constanttexture" id="baseColor">
+				<color name="color" value="0.871 0.376 0.0"/>
+			</texture>
+			<texture type="constanttexture" id="roughness">
+				<color name="color" value="0.0 0.0 1.0"/>
+			</texture>
+			<texture type="constanttexture" id="metallic">
+				<color name="color" value="0.0 0.0 0.0"/>
+			</texture>
+			<float name="anisotropy" value="0.0"/>
+			<float name="specular" value="0.5"/>
+			<float name="specularTint" value="0.0"/>
+			<float name="clearcoat" value="0.0"/>
+			<float name="clearcoatRoughness" value="0.0"/>
+			<float name="sheen" value="0.0"/>
+			<float name="sheenTint" value="0.0"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Backdrop.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.05,0.05,0.05"/>
+		</bsdf>
+	</mesh>
+
+
+	<mesh type="obj">
+		<string name="filename" value="meshes/Light Array.obj"/>
+		<light type="area">
+			<color name="color" value="0.63827 0.572175 0.420238"/>
+			<float name="intensity" value="4.0"/>
+		</light>
+	</mesh>
+</scene>
