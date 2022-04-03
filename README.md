@@ -37,7 +37,7 @@
 
 [3] [Simon Kallweit's project report](http://simon-kallweit.me/rendercompo2015/report/)
 
-[4] [Microfacet Models for Refraction through Rough Surfaces](https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf) **Bruce Walter , Stephen R. Marschner , Hongsong Li , Kenneth E. Torrance**. 2007
+[4] [Microfacet Models for Refraction through Rough Surfaces](https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf) **Bruce Walter , Stephen R. Marschner**. 2007
 
 [5] [Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs](https://jcgt.org/published/0003/02/03/paper.pdf) **Eric Heitz**. 2014
 
