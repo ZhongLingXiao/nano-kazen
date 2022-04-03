@@ -4,7 +4,7 @@
 
 # kazen 2022 Q1 report
 
-![](.\img\final_cover.jpg)
+![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/final_cover.jpg)
 
 
 
@@ -22,26 +22,27 @@
 6. Normal mapping
 7. Camera : Perspective | Thin Lens
 8. Light : mesh light, basic environment ( Blinn/Newell Latitude Mapping )
-
+<br>
 
 
 ## 2. KISS PBR shading model
 
-<img src=".\img\kiss_sm.jpg" style="zoom:50%;" />
+<div align=center><img src=".\img\kiss_sm.jpg" width="420" /></div>  
 
-<center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 1: Structure of the KISS PBR Shading Model</center>
+<div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 1: Structure of the KISS PBR Shading Model</center></div><br>
 
 
 
 **KISS** (kazen initial standard surface) , is a linear blend of a metallic BSDF and a dielectric BSDF, see **Figure 1**. Currently we only support opaque dielectric BSDF and it can be used as materials like plastics, wood, or stone.
-
+<br>
 
 
 **KISS** blend metallic and dielectric BSDFs based on parameters **metallic**.
 
-<img src=".\img\kiss_algo.jpg" style="zoom:50%;" />
+<div align=center><img src=".\img\kiss_algo.jpg" width="420"" /></div>  
 
-<center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 2: The KISS BRDF is a blend of metallic and dielectric BRDF models based on a metallic shader parameter</center>
+<div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 2: The KISS BRDF is a blend of metallic and dielectric BRDF models based on a metallic shader parameter</center></div><br>
+
 
 
 
@@ -50,7 +51,7 @@ For sampling the BRDF, I first use Russian-roulette to decide between sampling t
 ```c++
 float ratioDiffuse = (1.0f - metallic) / 2;
 ```
-
+<br>
 
 
 For non-metallic materials, 1/2 the samples are sampled with cosine weighted hemisphere sampling, the 1/2 with specular sampling described below. For metallic materials, all samples are sampled using specular sampling.
@@ -62,11 +63,11 @@ The specular samples are divided into sampling the GGX (specular lobe) and GGX (
 ```c++
 float ratioGGX = 1.0f / (1.0f + clearcoat);
 ```
-
+<br>
 
 
 For materials with no clearcoat, samples are only sampled using the GGX distribution, for materials with 100% clearcoat, 1/2 the samples are directed to either of the distributions.
-
+<br>
 
 
 ------
@@ -77,87 +78,86 @@ These following images shows material parameters support by **KISS**:
 
 |             0.0              |              0.5               |
 | :--------------------------: | :----------------------------: |
-| ![](.\img\param\m0.0_r0.png) | ![](.\img\param\m0.0_r0.5.png) |
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0.0_r0.png) | ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0.0_r0.5.png) |
 |           **0.0**            |            **1.0**             |
-| ![](.\img\param\m0.0_r0.png) |  ![](.\img\param\m0.0_r1.png)  |
-
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0.0_r0.png) |  ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0.0_r1.png)  |
+<br>
 
 
 ### 2.2 `metallic`
 
 |            0.0             |             0.5              |
 | :------------------------: | :--------------------------: |
-| ![](.\img\param\m1_r0.png) | ![](.\img\param\m1_r0.5.png) |
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m1_r0.png) | ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m1_r0.5.png) |
 |          **0.0**           |           **1.0**            |
-| ![](.\img\param\m1_r0.png) |  ![](.\img\param\m1_r1.png)  |
-
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m1_r0.png) |  ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m1_r1.png)  |
+<br>
 
 
 ### 2.3 `specular`
 
 |               0.0                |                0.5                 |
 | :------------------------------: | :--------------------------------: |
-| ![](.\img\param\m0_r0_spec0.png) | ![](.\img\param\m0_r0_spec0.5.png) |
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0_r0_spec0.png) | ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0_r0_spec0.5.png) |
 |             **0.0**              |              **1.0**               |
-| ![](.\img\param\m0_r0_spec0.png) |  ![](.\img\param\m0_r0_spec1.png)  |
-
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0_r0_spec0.png) |  ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0_r0_spec1.png)  |
+<br>
 
 
 ### 2.4 `specularTint`
 
 |               0.0                |                  0.5                   |
 | :------------------------------: | :------------------------------------: |
-| ![](.\img\param\m0_r0_spec1.png) | ![](.\img\param\m0_r0_spec1_st0.5.png) |
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0_r0_spec1.png) | ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0_r0_spec1_st0.5.png) |
 |             **0.0**              |                **1.0**                 |
-| ![](.\img\param\m0_r0_spec1.png) |  ![](.\img\param\m0_r0_spec1_st1.png)  |
-
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0_r0_spec1.png) |  ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0_r0_spec1_st1.png)  |
+<br>
 
 
 ### 2.5 `clearcoat`
 
 |             0.0              |              0.5               |
 | :--------------------------: | :----------------------------: |
-| ![](.\img\param\r0.5_c0.png) | ![](.\img\param\r0.5_c0.5.png) |
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0.5_c0.png) | ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0.5_c0.5.png) |
 |           **0.0**            |            **1.0**             |
-| ![](.\img\param\r0.5_c0.png) |  ![](.\img\param\r0.5_c1.png)  |
-
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0.5_c0.png) |  ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0.5_c1.png)  |
+<br>
 
 
 ### 2.6 `clearcoatRoughness`
 
 |             0.0              |                0.5                 |
 | :--------------------------: | :--------------------------------: |
-| ![](.\img\param\r0.5_c1.png) | ![](.\img\param\r0.5_c1_cr0.5.png) |
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0.5_c1.png) | ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0.5_c1_cr0.5.png) |
 |           **0.0**            |              **1.0**               |
-| ![](.\img\param\r0.5_c1.png) |  ![](.\img\param\r0.5_c1_cr1.png)  |
-
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0.5_c1.png) |  ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0.5_c1_cr1.png)  |
+<br>
 
 
 ### 2.7 `sheen`
 
 |            0.0             |             0.5              |
 | :------------------------: | :--------------------------: |
-| ![](.\img\param\r0_s0.png) | ![](.\img\param\r0_s0.5.png) |
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0_s0.png) | ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0_s0.5.png) |
 |          **0.0**           |           **1.0**            |
-| ![](.\img\param\r0_s0.png) |  ![](.\img\param\r0_s1.png)  |
-
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0_s0.png) |  ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0_s1.png)  |
+<br>
 
 
 ### 2.8 `sheenTint`
 
 |            0.0             |               0.5                |
 | :------------------------: | :------------------------------: |
-| ![](.\img\param\r0_s1.png) | ![](.\img\param\r0_s1_st0.5.png) |
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0_s1.png) | ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0_s1_st0.5.png) |
 |          **0.0**           |             **1.0**              |
-| ![](.\img\param\r0_s1.png) |  ![](.\img\param\r0_s1_st1.png)  |
-
-
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0_s1.png) |  ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/r0_s1_st1.png)  |
+<br>
 
 ## 3. Debug error
 
-![](.\img\m0_r0_spec0.5_error.png)
+![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/m0_r0_spec0.5_error.png)
 
-<center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 3: Firefly error and incorrect color bleeding in shadow | 4096 spp</center>
+<div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 3: Firefly error and incorrect color bleeding in shadow | 4096 spp</center></div><br>
 
 This error occurred when we set integrator **`maxDepth`** to a very high value, so the light path will be terminated only by russian roulette. The scenario is the light will bounce between floor and sphere forever, and make the shadow part look aweful. 
 
@@ -165,22 +165,21 @@ Althrought, kill light path by **`maxDepth`** without compensation will cause st
 
 |        maxDepth = infinity         |            maxDepth = 5            |
 | :--------------------------------: | :--------------------------------: |
-| ![](.\img\m0_r0_spec0.5_error.png) | ![](.\img\param\m0_r0_spec0.5.png) |
+| ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/m0_r0_spec0.5_error.png) | ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/param/m0_r0_spec0.5.png) |
+<br>
 
 
-
-> `maxDepth` parameter is found when I check cycles render setting : Light path, by default it sets `maxBounces` to 4.
+> `maxDepth` parameter is found when I check cycles render setting : Light path, by default it sets `maxBounces` to 4.<br>
 > **So the take-away is : Reverse thinking code logic by ground truth (cycles) results, not just debug through code.**
-
-
+<br>
 
 ## 4. Look-dev
 
 This shows the **cycles** shading graph.
 
-![](.\img\cycles_shader_graph.jpg)
+![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/cycles_shader_graph.jpg)
 
-<center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 4: The shading graph for creating the look</center>
+<div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 4: The shading graph for creating the look</center></div><br>
 
 The corresponding **nano-Kazen** material scene graph:
 
@@ -225,17 +224,16 @@ The corresponding **nano-Kazen** material scene graph:
 </bsdf>
 ```
 
-![](.\img\look1.png)
+![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/look1.png)
 
-<center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 5: 1920x1080 | 4096 spp | 11.7 min</center>
-
+<div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 5: 1920x1080 | 4096 spp | 11.7 min</center></div><br>
 
 
 ## 5. Final result
 
-![](.\img\final_cover.jpg)
+![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/final_cover.jpg)
 
-<center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 6: 3840x2160 | 10000 spp | 3.4 h</center>
+<div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 6: 3840x2160 | 10000 spp | 3.4 h</center></div><br>
 
 
 
@@ -243,9 +241,9 @@ Compare with Blender render result.
 
 |          blender-cycles           |                 nano-Kazen                  |
 | :-------------------------------: | :-----------------------------------------: |
-|    ![](.\img\blender_ref.png)     | ![](.\img\final_3.4h_4k_10000spp_1080p.png) |
+|    ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/blender_ref.png)     | ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/final_3.4h_4k_10000spp_1080p.png) |
 | 1920x1080 \| 2500 spp \| 4.47 min |      3840x2160  \| 10000 spp \| 3.4 h       |
-
+<br>
 
 
 ## Reference
