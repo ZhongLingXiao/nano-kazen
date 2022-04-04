@@ -1206,8 +1206,8 @@ https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/2022_q1_report
 
 开始思考下一阶段开发计划
 
-- [ ] 光源完善 ：hdr ，点，面
-- [ ] 更好的 sampler ：mmp 最喜欢的 `sampler 0-2 pmj bn`
+- [ ] 光源完善 ：hdr ，点，面 （真正意义上的面光源，矩形，圆形，三角形 ...）
+- [ ] 更好的 sampler ：例如 `pmj-bn | pmj(0,2) | pmj02-bn | z-sampler...`
 - [ ] bsdf 完善 : brdf ==> bsdf。
 - [ ] 微分部分 : 法线微分（bump_map），贴图微分(dtdx, dsdx, dtdy, dsdy)
 - [ ] uv mapping / 多个 uv sets
@@ -1223,5 +1223,44 @@ https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/2022_q1_report
 
 
 
+------
 
 
+
+`2022.4.4`**《My Favorite Samples》**
+
+开始学习大佬们最爱的 samples 系列：https://sites.google.com/view/myfavoritesamples
+
+- https://www.google.com/url?q=https%3A%2F%2Fwww.nvidia.com&sa=D&sntz=1&usg=AOvVaw0rkEWq61A8S18ysEPtGd_R)
+
+**Abstract**
+
+- [My favorite Samples](https://drive.google.com/open?id=1uydzAeqmulNiF0xNGkVbg-n-kwDArLXY)
+
+**Recording**
+
+- [SIGGRAPH University 2019 Course](https://youtu.be/bHDfETTS550) - My Favorite Samples (2:59:22)
+
+**Presentations**
+
+- [My favorite Samples](https://drive.google.com/open?id=10N430JGjfcFR-xA7nddviUE-hJ0X2RZI) ([Alexander Keller](https://www.google.com/url?q=https%3A%2F%2Fresearch.nvidia.com%2Fperson%2Falex-keller&sa=D&sntz=1&usg=AOvVaw2wOD0M94kM2dPI95LbgsZs), [NVIDIA](https://www.google.com/url?q=https%3A%2F%2Fwww.nvidia.com&sa=D&sntz=1&usg=AOvVaw0rkEWq61A8S18ysEPtGd_R))
+- [Progressive Multi-Jittered Sequences](https://drive.google.com/open?id=1RK5F1abtoW2uSHszf-lUSZKO-ypLfHuk) ([Per Christensen](https://www.google.com/url?q=https%3A%2F%2Fwww.seanet.com%2F~myandper%2Fper.htm&sa=D&sntz=1&usg=AOvVaw2xe9aCNxV2THn2VeIjhqDc), [Pixar](http://www.google.com/url?q=http%3A%2F%2Fwww.pixar.com&sa=D&sntz=1&usg=AOvVaw0JkXLtXHEte0A_e_NbgSHl)), check the code for [funcsamp2D on github](http://www.google.com/url?q=http%3A%2F%2Fgithub.com%2Fperchristensen%2Ffuncsamp2D&sa=D&sntz=1&usg=AOvVaw16u58wh8lhKSqyshyP_yQ7)
+- [Warp and Effect](https://drive.google.com/open?id=1IhkbbAhziaad-POpyEtE0yarF-nxcCnd) ([Matt Pharr](https://www.google.com/url?q=https%3A%2F%2Fpharr.org%2Fmatt%2F&sa=D&sntz=1&usg=AOvVaw1Fz02r-48jnObmPWBT81Kq), [NVIDIA](https://www.google.com/url?q=https%3A%2F%2Fwww.nvidia.com&sa=D&sntz=1&usg=AOvVaw0rkEWq61A8S18ysEPtGd_R))
+- [Low-Discrepancy Blue Noise Sampling](https://drive.google.com/open?id=1b8m0LmJXt_4Jp7wXSDUjkzAKpCvECLws) ([Abdalla Ahmed](http://www.google.com/url?q=http%3A%2F%2Fabdallagafar.com&sa=D&sntz=1&usg=AOvVaw3Z5Vg3_OoKAEDqO_n6aY83), [King Abdullah University of Science and Technology](https://www.google.com/url?q=https%3A%2F%2Fwww.kaust.edu.sa%2Fen&sa=D&sntz=1&usg=AOvVaw0VwwKxCnQUoU2p60ixyhDc)), watch the [video recording](https://drive.google.com/file/d/1agXCIXNfdCpCrPnUr02rBFwF5Iid61XA/view?usp=sharing)
+- [On Multiple Virtues of Blue Noise Sampling](https://drive.google.com/open?id=1a0zQ9vWKJO1ojSut_c2gHSlFCvkD49b-) ([Victor Ostromoukhov](https://www.google.com/url?q=https%3A%2F%2Fperso.liris.cnrs.fr%2Fvictor.ostromoukhov%2F&sa=D&sntz=1&usg=AOvVaw2Qed5n12a_ytr6UNDbx4ps), [Université Claude Bernard Lyon 1](https://www.google.com/url?q=https%3A%2F%2Fwww.univ-lyon1.fr&sa=D&sntz=1&usg=AOvVaw0_rMS9LHrJZaurCxZxbKL_))
+- [Blue-Noise Dithered Sampling](https://drive.google.com/open?id=1MwphDkw6HeOzA1xcrmy_c7YvartaYjnf) ([Iliyan Georgiev](http://www.google.com/url?q=http%3A%2F%2Filiyan.com&sa=D&sntz=1&usg=AOvVaw3F9KfC_epl8clPopML9Z4l), [Autodesk](https://www.google.com/url?q=https%3A%2F%2Fwww.autodesk.com&sa=D&sntz=1&usg=AOvVaw21X5Xe6usJ8p8V18-rBsVc))
+
+
+
+**初步结论是： pmj02 即 [Progressive Multi-Jittered Sequences] 文章中的实现更适合当前 nano-kazen**
+
+- 【论文】https://graphics.pixar.com/library/ProgressiveMultiJitteredSampling/paper.pdf
+
+- 【补充材料】https://graphics.pixar.com/library/ProgressiveMultiJitteredSampling/pmj_suppl.pdf
+
+- 【github】https://github.com/Andrew-Helmer/pmj-cpp
+
+具体细节还需要继续研究：
+
+1. 我们是像以前的 sampler 直接传给 intergator 然后一直 next2D() ？感觉 camera ray 这样做可以理解，因为是像素对应的数据，应该通过 sampler 来获取均匀随机分布。但是如果 next2D 被用在 path joint 上就感觉不对了。
+2. 我的理解是：只有 camera ray 和 light sample 的时候，这种 sampler 才起作用。比如说 brdf sample dir 的时候 random 和 这种 ld-sampler 其实没区别？
