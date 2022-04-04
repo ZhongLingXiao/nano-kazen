@@ -240,7 +240,7 @@ Compare with Blender render result.
 
 |          blender-cycles           |                 nano-Kazen                  |
 | :-------------------------------: | :-----------------------------------------: |
-|    ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/blender_ref.png)     | ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/final_3.4h_4k_10000spp_1080p.png) |
+|    ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/blender_ref.png)     | <div align=center><img src=".\img\final_3.4h_4k_10000spp.png" width="1920" /></div>  |
 | 1920x1080 \| 2500 spp \| 4.47 min |      3840x2160  \| 10000 spp \| 3.4 h       |
 <br>
 
