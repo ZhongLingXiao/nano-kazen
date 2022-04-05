@@ -1206,7 +1206,7 @@ https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/2022_q1_report
 
 开始思考下一阶段开发计划
 
-- [ ] 光源完善 ：hdr ，点，面 （真正意义上的面光源，矩形，圆形，三角形 ...）
+- [ ] 光源完善 ：hdr ，点，面 （真正意义上的面光源，矩形，圆形，三角形 ...），Light class interface 修改
 - [ ] 更好的 sampler ：例如 `pmj-bn | pmj(0,2) | pmj02-bn | z-sampler...`
 - [ ] bsdf 完善 : brdf ==> bsdf。
 - [ ] 微分部分 : 法线微分（bump_map），贴图微分(dtdx, dsdx, dtdy, dsdy)
