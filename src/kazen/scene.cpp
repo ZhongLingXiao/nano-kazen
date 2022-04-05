@@ -55,21 +55,27 @@ const Color3f Scene::getBackgroundColor(const Vector3f &dir) const {
     if (!m_background)
         return Color3f(0.f);
     
-    // Blinn/Newell Latitude Mapping
-    // https://www.reindelsoftware.com/Documents/Mapping/Mapping.html
-    // TODO: Add more mapping methods
-    auto u = (std::atan2(dir.x(), dir.z()) + M_PI) * INV_TWOPI;
-    auto v = (std::asin(dir.y()) + 0.5f*M_PI ) * INV_PI;
-    
-    auto invalid = [&]() {
-        return std::isnan(dir.x()) || std::isnan(dir.y()) || std::isnan(dir.z()) ||
-            std::isnan(u) || std::isnan(v);
-    };    
-    
-    if (invalid())
-        return Color3f(0.f);
+    // // Blinn/Newell Latitude Mapping
+    // // https://www.reindelsoftware.com/Documents/Mapping/Mapping.html
+    // // TODO: Add more mapping methods
+    // auto u = (std::atan2(dir.x(), dir.z()) + M_PI) * INV_TWOPI;
+    // auto v = (std::asin(dir.y()) + 0.5f*M_PI ) * INV_PI;
+    // auto invalid = [&]() {
+    //     return std::isnan(dir.x()) || std::isnan(dir.y()) || std::isnan(dir.z()) ||
+    //         std::isnan(u) || std::isnan(v);
+    // };    
+    // if (invalid())
+    //     return Color3f(0.f);
+    // return m_background->eval(Point2f(u, v));
 
-    return m_background->eval(Point2f(u, v));
+    auto invalid = [&]() {
+        return std::isnan(dir.x()) || std::isnan(dir.y()) || std::isnan(dir.z());
+    }; 
+
+    if (invalid())
+        return Color3f(0.f);  
+
+    return m_background->eval(dir);
 }
 
 void Scene::addChild(Object *obj) {

@@ -58,6 +58,23 @@ public:
         return Color3f(color[0], color[1], color[2]);
     } 
 
+    Color3f eval(const Vector3f &dir_) const override {         
+        OIIO::TextureOpt options;
+        options.swrap = OIIO::TextureOpt::WrapPeriodic;
+        options.twrap = OIIO::TextureOpt::WrapPeriodic;
+        float color[3] = {0.0f, 0.0f, 0.0f};
+        Imath::V3f dir(dir_.x(), dir_.y(), dir_.z());
+        
+        getTextureSystem()->environment(
+            m_filename,
+            options,
+            dir,
+            Imath::V3f(0.f), Imath::V3f(0.f),
+            3, &color[0]);  
+        
+        return Color3f(color[0], color[1], color[2]);
+    }
+
     std::string toString() const {
         return fmt::format(
                 "ImageTexture[          \n"
@@ -95,6 +112,13 @@ public:
         }         
         return Color3f(0.f);
     } 
+
+    Color3f eval(const Vector3f &dir) const override { 
+        if (m_nested) {
+            return m_intensity * m_nested->eval(dir);  
+        }         
+        return Color3f(0.f);
+    }     
 
     void addChild(Object *obj) override {
         switch (obj->getClassType()) {

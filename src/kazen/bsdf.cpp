@@ -194,7 +194,9 @@ public:
 };
 
 
-/// normal map (normal switch)
+/**
+ * \brief Diffuse / Lambertian BRDF model with texture as albedo
+ */
 class Lambertian : public BSDF {
 public:
     Lambertian(const PropertyList &propList) { }
