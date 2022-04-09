@@ -2,8 +2,10 @@
 > 这是kazen的一小步，更是国人自主光线追踪渲染器的一大步。
 >
 > Arnold，Renderman直呼：Houston, we get problem!
-<br>
 
+[官方网站入口](https://kazen-renderer.github.io/)
+<br>
+<br>
 
 
 ## 1. KISS PBR shading model
@@ -26,7 +28,7 @@
 7. Camera : Perspective | Thin Lens
 8. Light : mesh light, basic environment ( Blinn/Newell Latitude Mapping )
 
-[See the full kazen-2022-q1 report](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/2022_q1_report.md)
+[See the full kazen-2022-q1 report](https://kazen-renderer.github.io/2022/04/kazen-con-v001-report.html)
 <br>
 <br>
 ## Reference
@@ -35,9 +37,9 @@
 
 [2] [Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering](https://blog.selfshadow.com/publications/s2015-shading-course/burley/s2015_pbs_disney_bsdf_notes.pdf) **Brent Burley**. 2015
 
-[3] [Simon Kallweit's project report](http://simon-kallweit.me/rendercompo2015/report/)
+[3] [Simon Kallweit's project report](http://simon-kallweit.me/rendercompo2015/report/) **Simon Kallweit**. 2015
 
-[4] [Microfacet Models for Refraction through Rough Surfaces](https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf) **Bruce Walter , Stephen R. Marschner**. 2007
+[4] [Microfacet Models for Refraction through Rough Surfaces](https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf) **Bruce Walter**. 2007
 
 [5] [Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs](https://jcgt.org/published/0003/02/03/paper.pdf) **Eric Heitz**. 2014
 
