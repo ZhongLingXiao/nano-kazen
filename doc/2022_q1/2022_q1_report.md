@@ -26,20 +26,18 @@
 
 
 ## 2. KISS PBR shading model
+**KISS** (kazen initial standard surface) , is a linear blend of a metallic BSDF and a dielectric BSDF, see **Figure 1**. Currently we only support opaque dielectric BSDF and it can be used as materials like plastics, wood, or stone.
+<br>
 
-<div align=center><img src=".\img\kiss_sm.jpg" width="420" /></div>  
+<div align=center><img src=".\img\kiss_sm.jpg" width="320" /></div>  
 
 <div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 1: Structure of the KISS PBR Shading Model</center></div><br>
 
 
 
-**KISS** (kazen initial standard surface) , is a linear blend of a metallic BSDF and a dielectric BSDF, see **Figure 1**. Currently we only support opaque dielectric BSDF and it can be used as materials like plastics, wood, or stone.
-<br>
-
-
 **KISS** blend metallic and dielectric BSDFs based on parameters **metallic**.
 
-<div align=center><img src=".\img\kiss_algo.jpg" width="420"" /></div>  
+<div align=center><img src=".\img\kiss_algo.jpg" width="320"" /></div>  
 
 <div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 2: The KISS BRDF is a blend of metallic and dielectric BRDF models based on a metallic shader parameter</center></div><br>
 
@@ -251,9 +249,9 @@ Compare with Blender render result.
 
 [2] [Extending the Disney BRDF to a BSDF with Integrated Subsurface Scattering](https://blog.selfshadow.com/publications/s2015-shading-course/burley/s2015_pbs_disney_bsdf_notes.pdf) **Brent Burley**. 2015
 
-[3] [Simon Kallweit's project report](http://simon-kallweit.me/rendercompo2015/report/)
+[3] [Simon Kallweit's project report](http://simon-kallweit.me/rendercompo2015/report/) **Simon Kallweit**. 2015
 
-[4] [Microfacet Models for Refraction through Rough Surfaces](https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf) **Bruce Walter , Stephen R. Marschner , Hongsong Li , Kenneth E. Torrance**. 2007
+[4] [Microfacet Models for Refraction through Rough Surfaces](https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf) **Bruce Walter**. 2007
 
 [5] [Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs](https://jcgt.org/published/0003/02/03/paper.pdf) **Eric Heitz**. 2014
 
