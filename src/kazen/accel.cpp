@@ -64,22 +64,6 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
     uint32_t f = (uint32_t) -1;      // Triangle index of the closest intersection
     Ray3f ray(ray_);
 
-    // /* Brute force search through all triangles */
-    // for (uint32_t idx = 0; idx < m_meshes[0]->getTriangleCount(); ++idx) {
-    //     float u, v, t;
-    //     if (m_meshes[0]->rayIntersect(idx, ray, u, v, t)) {
-    //         /* An intersection was found! Can terminate
-    //            immediately if this is a shadow ray query */
-    //         if (shadowRay)
-    //             return true;
-    //         ray.maxt = its.t = t;
-    //         its.uv = Point2f(u, v);
-    //         its.mesh = m_meshes[0];
-    //         f = idx;
-    //         foundIntersection = true;
-    //     }
-    // }
-
     /* initialize intersect context */
     RTCIntersectContext context;
     rtcInitIntersectContext(&context);
@@ -115,7 +99,7 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
         if (shadowRay) // trace shadow ray
             return true;
         ray.maxt = its.t = rayhit.ray.tfar;
-        its.uv = Point2f(rayhit.hit.u, rayhit.hit.v);
+        its.uv = Point2f(rayhit.hit.u, rayhit.hit.v); // prim_uv
         its.mesh = m_meshes[rayhit.hit.geomID];
         f = rayhit.hit.primID;
         foundIntersection = true;
@@ -144,89 +128,98 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
         /* Vertex indices of the triangle */
         uint32_t idx0 = F(0, f), idx1 = F(1, f), idx2 = F(2, f);
 
-        Point3f p0 = V.col(idx0), p1 = V.col(idx1), p2 = V.col(idx2);
+        Point3f p0 = V.col(idx0), 
+                p1 = V.col(idx1), 
+                p2 = V.col(idx2);
 
         /* Compute the intersection positon accurately
            using barycentric coordinates */
         its.p = bary.x() * p0 + bary.y() * p1 + bary.z() * p2;
+
+        /* Compute the geometry frame */
+        Vector3f dp0 = p1 - p0, 
+                 dp1 = p2 - p0;
+        its.geoFrame = Frame(dp0.cross(dp1).normalized());
 
         /* Compute proper texture coordinates if provided by the mesh */
         if (UV.size() > 0)
             its.uv = bary.x() * UV.col(idx0) + 
                      bary.y() * UV.col(idx1) + 
                      bary.z() * UV.col(idx2);
-
-        /* Compute the geometry frame */
-        its.geoFrame = Frame((p1-p0).cross(p2-p0).normalized());
         
-        if (N.size() > 0 && UV.size() > 0) {
-            Point2f uv0 = UV.col(idx0), uv1 = UV.col(idx1), uv2 = UV.col(idx2);
-            Vector3f dP1=p1-p0, dP2=p2-p0;
-            Point2f dUV1=uv1-uv0, dUV2=uv2-uv0;
+        if (likely(N.size() > 0 && UV.size() > 0)) {
+            Normal3f n0 = N.col(idx0), 
+                     n1 = N.col(idx1), 
+                     n2 = N.col(idx2);
 
-            float length = dP1.cross(dP2).norm();
-            if (length == 0) {
+            Point2f uv0 = UV.col(idx0), 
+                    uv1 = UV.col(idx1), 
+                    uv2 = UV.col(idx2);
+
+            Vector3f dp0 = p1 - p0, 
+                     dp1 = p2 - p0;
+            
+            Point2f duv0 = uv1 - uv0, 
+                    duv1 = uv2 - uv0;
+
+            Normal3f shNormal = bary.x() * n0 + bary.y() * n1 + bary.z() * n2;
+            
+            float length = dp0.cross(dp1).norm();
+            if (length > 0.f) {
+                
+                float determinant = duv0.x()*duv1.y() - duv0.y()*duv1.x();
+                if (determinant > 0.f) {
+                    float invDet = 1.0f / determinant;
+                    its.dpdu = ( duv1.y() * dp0 - duv0.y() * dp1) * invDet;
+                    its.dpdv = (-duv1.x() * dp0 + duv0.x() * dp1) * invDet;
+
+                    /* TODO: Add dndu dndv */
+                    // float invLN = 1.f / shNormal.norm(); 
+                    // shNormal.normalize();
+
+                    // Vector3f dndu = (n1 - n0) * invLN;
+                    // Vector3f dndv = (n2 - n0) * invLN;
+                    // dndu -= shNormal * shNormal.dot(dndu);
+                    // dndv -= shNormal * shNormal.dot(dndv);
+
+                    // its.dndu = (duv1.y()*dndu - duv0.y()*dndv) * invDet;
+                    // its.dndv = (-duv1.x()*dndu + duv0.x()*dndv) * invDet;
+
+                    its.shFrame.n = shNormal.normalized();
+                    its.shFrame.s = (its.dpdu - shNormal * shNormal.dot(its.dpdu)).normalized();
+                    its.shFrame.t = its.shFrame.n.cross(its.shFrame.s).normalized(); 
+                } else {
+                    /* The user-specified parameterization is degenerate. Pick
+                    arbitrary tangents that are perpendicular to the geometric normal */
+                    // coordinateSystem(n.normalized(), its.dpdu, its.dpdv);
+
+                    its.shFrame = Frame(shNormal.normalized());
+                    its.dpdu = its.shFrame.s; 
+                    its.dpdv = its.shFrame.t;
+                    its.dndu = Vector3f(0.f);
+                    its.dndv = Vector3f(0.f);  
+                }                
+            } else {
+                its.shFrame = Frame(shNormal.normalized());
+            }
+        }
+        else {
+            if (N.size() > 0) {
+                /* Compute the shading frame. Note that for simplicity,
+                the current implementation doesn't attempt to provide
+                tangents that are continuous across the surface. That
+                means that this code will need to be modified to be able
+                use anisotropic BRDFs, which need tangent continuity */
+
                 its.shFrame = Frame(
                     (bary.x() * N.col(idx0) +
                     bary.y() * N.col(idx1) +
                     bary.z() * N.col(idx2)).normalized());
-            } else {
-                float determinant = dUV1.x()*dUV2.y() - dUV1.y()*dUV2.x();
-                if (determinant == 0) {
-                    /* The user-specified parameterization is degenerate. Pick
-                    arbitrary tangents that are perpendicular to the geometric normal */
-                    // coordinateSystem(n.normalized(), its.dpdu, its.dpdv);
-                    Vector3f shadingNormal = 
-                        (bary.x() * N.col(idx0) +
-                         bary.y() * N.col(idx1) +
-                         bary.z() * N.col(idx2)).normalized();
-
-                    its.shFrame = Frame(shadingNormal);
-                    its.dpdu = its.shFrame.s; 
-                    its.dpdv = its.shFrame.t;
-                    its.dndu = Vector3f(0.f);
-                    its.dndv = Vector3f(0.f);
-                } else {
-                    float invDet = 1.0f / determinant;
-                    Vector3f dpdu = ( dUV2.y() * dP1 - dUV1.y() * dP2) * invDet;
-                    Vector3f dpdv = (-dUV2.x() * dP1 + dUV1.x() * dP2) * invDet;
-
-                    Normal3f shNormal = 
-                        (bary.x() * N.col(idx0) +
-                         bary.y() * N.col(idx1) +
-                         bary.z() * N.col(idx2));
-                    float invLN = 1.f / shNormal.norm(); 
-                    shNormal.normalize();
-
-                    Vector3f dndu = (N.col(idx1) - N.col(idx0)) * invLN;
-                    dndu -= shNormal * shNormal.dot(dndu);
-                    Vector3f dndv = (N.col(idx2) - N.col(idx0)) * invLN;
-                    dndv -= shNormal * shNormal.dot(dndv);
-
-                    its.dpdu = dpdu; 
-                    its.dpdv = dpdv;
-                    its.dndu = (dUV2.y()*dndu - dUV1.y()*dndv) * invDet;
-                    its.dndv = (-dUV2.x()*dndu + dUV1.x()*dndv) * invDet;
-
-                    its.shFrame.n = shNormal;
-                    its.shFrame.s = (its.dpdu - shNormal * shNormal.dot(its.dpdu)).normalized();
-                    its.shFrame.t = its.shFrame.n.cross(its.shFrame.s).normalized();         
-                }        
+            } 
+            else {
+                /* No normals provided. Use the geometric frame */
+                its.shFrame = its.geoFrame;
             }
-        }
-        else if (N.size() > 0) {
-            /* Compute the shading frame. Note that for simplicity,
-               the current implementation doesn't attempt to provide
-               tangents that are continuous across the surface. That
-               means that this code will need to be modified to be able
-               use anisotropic BRDFs, which need tangent continuity */
-
-            its.shFrame = Frame(
-                (bary.x() * N.col(idx0) +
-                 bary.y() * N.col(idx1) +
-                 bary.z() * N.col(idx2)).normalized());
-        } else {
-            its.shFrame = its.geoFrame;
         }
     }
 

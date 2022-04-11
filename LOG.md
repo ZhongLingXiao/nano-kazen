@@ -1264,3 +1264,17 @@ https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/2022_q1_report
 
 1. 我们是像以前的 sampler 直接传给 intergator 然后一直 next2D() ？感觉 camera ray 这样做可以理解，因为是像素对应的数据，应该通过 sampler 来获取均匀随机分布。但是如果 next2D 被用在 path joint 上就感觉不对了。
 2. 我的理解是：只有 camera ray 和 light sample 的时候，这种 sampler 才起作用。比如说 brdf sample dir 的时候 random 和 这种 ld-sampler 其实没区别？
+
+
+
+------
+
+
+
+`2022.4.11`**accel 的简单重构**
+
+参考 embree 中的样例代码：subdivision_geometry
+
+> 注意：不能这样计算，只有subdivision mesh 可以用 rtcInterpolate1 来计算 dpdu 和 dpdv
+>
+> 测试下来错误的效果是：法线本来是凹的变成凸的了。mitsuba2 里面的方式是：手算
