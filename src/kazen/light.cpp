@@ -61,40 +61,6 @@ private:
 };
 
 
-/// point light 
-class PointLight : public Light {
-public:
-	PointLight(const PropertyList &propList) {
-		m_position = propList.getPoint("position", Point3f(0.f));
-		m_power = propList.getColor("power", Color3f(1.f));
-	}
-
-    Color3f sample(LightQueryRecord &lRec, Sampler *sampler, const Mesh *mesh) const override {
-		lRec.wi = (m_position - lRec.ref).normalized();
-		lRec.p = m_position;
-		lRec.pdf = 1.f;
-		lRec.shadowRay = Ray3f(lRec.ref, lRec.wi, Epsilon, (m_position - lRec.ref).norm() - Epsilon);
-		return m_power / (4.f * M_PI * (m_position - lRec.ref).squaredNorm());
-	}
-
-	Color3f eval(const LightQueryRecord &lRec) const override {
-		return m_power / (4.f * M_PI * (m_position - lRec.ref).squaredNorm());
-	}
-
-    float pdf(const LightQueryRecord &lRec, const Mesh *mesh) const override {
-		return 1.f;
-	}
-
-	virtual std::string toString() const {
-		return "PointLight[]";
-	}
-
-private:
-	Color3f m_power;
-	Point3f m_position;
-};
-
 
 KAZEN_REGISTER_CLASS(AreaLight, "area")
-KAZEN_REGISTER_CLASS(PointLight, "point")
 NAMESPACE_END(kazen)

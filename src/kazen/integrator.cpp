@@ -278,9 +278,9 @@ public:
                 bsdfWeight = powerHeuristic(bsdfPdf, lightPdf_);
             }
 
-            // if (bRec.measure == EDiscrete) {
-            //     bsdfWeight = 1.f;
-            // }
+            if (bRec.measure == EDiscrete) {
+                bsdfWeight = 1.f;
+            }
             
             /* Increase depth for rr */
             depth++;

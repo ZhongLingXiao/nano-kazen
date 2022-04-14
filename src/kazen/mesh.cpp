@@ -111,20 +111,21 @@ void Mesh::sample(Sampler *sampler, Point3f &p, Normal3f &n) const {
     /* sample a barycentric coordinate: pbrt-13.6.5 Sampling a Triangle
     https://www.pbr-book.org/3ed-2018/Monte_Carlo_Integration/2D_Sampling_with_Multidimensional_Transformations#SamplingaUnitDisk
     */
-    float sqrtOneMinusEpsilon = std::sqrt(1-sampler->next1D());
-    float alpha = 1 - sqrtOneMinusEpsilon ;
-    float beta = sampler->next1D() * sqrtOneMinusEpsilon;
+    float su0 = std::sqrt(sampler->next1D());
+    float u = 1 - su0 ;
+    float v = sampler->next1D() * su0;
 
+    /* index */
     uint32_t i0 = m_F(0, index), i1 = m_F(1, index), i2 = m_F(2, index);
     
     /* position */
     const Point3f p0 = m_V.col(i0), p1 = m_V.col(i1), p2 = m_V.col(i2);
-    p = p0 + alpha * (p1 - p0) + beta * (p2 - p0);
+    p = p0 + u * (p1 - p0) + v * (p2 - p0);
 
     /* normal */
 	if (m_N.size() > 0) {
 		const Normal3f n0 = m_N.col(i0), n1 = m_N.col(i1), n2 = m_N.col(i2);
-		n = n0 + alpha * (n1 - n0) + beta * (n2 - n0);
+		n = n0 + u * (n1 - n0) + v * (n2 - n0);
         n.normalized();
 	} else {
 		n = (p1 - p0).cross(p2 - p0).normalized();
