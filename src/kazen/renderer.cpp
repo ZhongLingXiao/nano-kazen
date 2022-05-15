@@ -17,9 +17,13 @@
 NAMESPACE_BEGIN(kazen)
 NAMESPACE_BEGIN(renderer)
 
-void renderSample(const Scene *scene, Sampler *sampler, ImageBlock &block, const Point2f &pixelSample) {
+void renderSample(const Scene *scene, Sampler *sampler, ImageBlock &block, const Point2i &pixelPosition) {
     const Integrator *integrator = scene->getIntegrator();
     const Camera *camera = scene->getCamera();
+
+    /* Get pixel sample */
+    Point2f pixelSample = Point2f(float(pixelPosition.x()), float(pixelPosition.y())) + sampler->next2D();
+
     /* Get random 2d */
     Point2f apertureSample = sampler->next2D();
 
@@ -32,24 +36,43 @@ void renderSample(const Scene *scene, Sampler *sampler, ImageBlock &block, const
 
     /* Store in the image block */
     block.put(pixelSample, value);
+
+    sampler->advance();
 }
 
 
 void renderBlock(const Scene *scene, Sampler *sampler, ImageBlock &block) {
     Point2i offset = block.getOffset();
     Vector2i size  = block.getSize();
+    int pixelCount = size.x() * size.y();
 
     /* Clear the block contents */
     block.clear();
 
+    // /* For each pixel and pixel sample sample */
+    // for (int y=0; y<size.y(); ++y) {
+    //     for (int x=0; x<size.x(); ++x) {
+    //         for (uint32_t i=0; i<sampler->getSampleCount(); ++i) {
+    //             Point2f pixelSample = Point2f((float) (x + offset.x()), (float) (y + offset.y())) + sampler->next2D();
+    //             /* Render all contained pixels */
+    //             renderSample(scene, sampler, block, pixelSample);
+    //         }
+    //     }
+    // }
+
     /* For each pixel and pixel sample sample */
-    for (int y=0; y<size.y(); ++y) {
-        for (int x=0; x<size.x(); ++x) {
-            for (uint32_t i=0; i<sampler->getSampleCount(); ++i) {
-                Point2f pixelSample = Point2f((float) (x + offset.x()), (float) (y + offset.y())) + sampler->next2D();
-                /* Render all contained pixels */
-                renderSample(scene, sampler, block, pixelSample);
-            }
+    for (int i=0; i<pixelCount; ++i) {
+        /* Sampler seed update */
+        // TODO: sampler seed
+
+        /* Get current pixel position in block */
+        // TODO: using morton encode to get appropriate pixel position
+        Point2i pos = Point2i(i%size.x(), i/size.x());
+        pos += offset;
+
+        for (int j=0; j<sampler->getSampleCount(); ++j) {
+            /* Render all contained pixels */
+            renderSample(scene, sampler, block, pos);
         }
     }
 }
