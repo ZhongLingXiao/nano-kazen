@@ -1,7 +1,7 @@
 # nano-Kazen
 > 这是kazen的一小步，更是国人自主光线追踪渲染器的一大步。
 >
-> Arnold，Renderman直呼：Houston, we get problem!
+> Arnold，Renderman直呼：Houston, we get a problem!
 
 [官方网站入口](https://kazen-renderer.github.io/)
 <br>
