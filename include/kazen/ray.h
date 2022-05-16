@@ -60,6 +60,16 @@ template <typename _PointType, typename _VectorType> struct TRay {
     /// Return the position of a point along the ray
     PointType operator() (Scalar t) const { return o + t * d; }
 
+    /// operator=
+    TRay &operator=(const TRay &ray) {
+        o = ray.o;
+        d = ray.d;
+        dRcp = ray.dRcp;
+        mint = ray.mint;
+        maxt = ray.maxt;
+        return *this;
+    }
+
     /// Return a ray that points into the opposite direction
     TRay reverse() const {
         TRay result;

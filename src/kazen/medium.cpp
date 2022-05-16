@@ -14,7 +14,7 @@ public:
         m_absorptionCoefficient = -log(absorptionColor) / absorptionAtDistance;
     }
 
-    float distance(const Ray3f &ray, const Point2f &sample) const {
+    float distance(const Ray3f &ray, [[maybe_unused]] const Point2f &sample) const {
         return ray.maxt;
     }
 

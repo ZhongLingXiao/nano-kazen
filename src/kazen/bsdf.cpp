@@ -199,7 +199,7 @@ public:
  */
 class Lambertian : public BSDF {
 public:
-    Lambertian(const PropertyList &propList) { }
+    Lambertian([[maybe_unused]] const PropertyList &propList) { }
 
     ~Lambertian() {
         if(!m_albedo) delete m_albedo;
@@ -278,7 +278,7 @@ private:
 /// normal map (normal switch)
 class NormalMap : public BSDF {
 public:
-    NormalMap(const PropertyList &propList) { }
+    NormalMap([[maybe_unused]] const PropertyList &propList) { }
 
     ~NormalMap() {
         if(!m_normalMap) delete m_normalMap;
@@ -361,7 +361,7 @@ public:
     }
 
     // https://arxiv.org/abs/1705.01263
-    Frame getFrame(const Intersection &its, Vector3f n, Vector3f wi) const {
+    Frame getFrame(const Intersection &its, Vector3f n, [[maybe_unused]] Vector3f wi) const {
 
         // 1. Naive implementation
         Frame result;
@@ -1010,7 +1010,7 @@ public:
         float FH = schlickWeight(L.dot(H));
 
         float cosThetaD = V.dot(H);
-        float FD90 = 0.5f * 2 * roughness * cosThetaD * cosThetaD;
+        [[maybe_unused]] float FD90 = 0.5f * 2 * roughness * cosThetaD * cosThetaD;
 
         float Lambert = (1.f - 0.5f*FL) * (1.f - 0.5f*FV);
         float RR = 2.f * roughness * cosThetaD * cosThetaD;

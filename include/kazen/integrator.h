@@ -19,7 +19,7 @@ public:
     virtual ~Integrator() { }
 
     /// Perform an (optional) preprocess step
-    virtual void preprocess(const Scene *scene) { }
+    virtual void preprocess([[maybe_unused]] const Scene *scene) { }
 
     /**
      * \brief Sample the incident radiance along a ray
