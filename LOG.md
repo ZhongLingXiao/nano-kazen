@@ -1271,10 +1271,22 @@ https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/2022_q1_report
 
 
 
-`2022.4.11`**accel 的简单重构**
+`2022.4.11` **accel 的简单重构**
 
 参考 embree 中的样例代码：subdivision_geometry
 
 > 注意：不能这样计算，只有subdivision mesh 可以用 rtcInterpolate1 来计算 dpdu 和 dpdv
 >
 > 测试下来错误的效果是：法线本来是凹的变成凸的了。mitsuba2 里面的方式是：手算
+
+
+
+------
+
+
+
+`2022.5.18` **全新 sampler 支持的框架搭建**
+
+支持全新 sampler 的框架，为后续 Stratified 或 PMJ02BN sampler 完成基础支持。
+
+`hash` 和 `Tiny Encryption Algorithm (TEA)` 的支持，用于随机数的 seed 更新，另外 `pcg32` 已经完成，与PBRT-v4 一摸一样。
