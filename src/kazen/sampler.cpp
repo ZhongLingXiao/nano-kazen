@@ -34,9 +34,6 @@ public:
         );
     }
 
-    void generate() { /* No-op for this sampler */ }
-    void advance()  { /* No-op for this sampler */ }
-
     float next1D() {
         return m_random.nextFloat();
     }
@@ -69,25 +66,32 @@ private:
 class Stratified : public Sampler {
 public:
     Stratified(const PropertyList &propList) {
-        m_sampleCount = (size_t) propList.getInteger("sampleCount", 1);
+        m_seed = (uint64_t) propList.getInteger("seed", 1);
+        m_sampleCount = (size_t) propList.getInteger("sampleCount", 16);
+        m_resolution = (size_t) propList.getInteger("resolution", 4);
+        while (sqr(m_resolution) < m_sampleCount)
+            m_resolution++;
+        if (m_sampleCount != sqr(m_resolution))
+            LOG("Sample count should be square and power of two, rounding to {}", sqr(m_resolution));    
     
+        m_sampleCount = sqr(m_resolution);
+        m_invSampleCount = 1.f / m_sampleCount;
+        m_invResolution = 1.f / m_resolution;
+
     }
 
     virtual ~Stratified() { }
 
     std::unique_ptr<Sampler> clone() const {
         std::unique_ptr<Stratified> cloned(new Stratified());
-        cloned->m_sampleCount = m_sampleCount;
-        cloned->m_random = m_random;
+        cloned->m_seed              = m_seed;
+        cloned->m_random            = m_random;
+        cloned->m_sampleCount       = m_sampleCount;
+        cloned->m_invSampleCount    = m_invSampleCount;
+        cloned->m_resolution        = m_resolution;
+        cloned->m_invResolution     = m_invResolution;
         return cloned;
     }
-
-    void prepare([[maybe_unused]] const ImageBlock &block) {
-        /* No-op for this sampler */
-    }
-
-    void generate() { /* No-op for this sampler */ }
-    void advance()  { /* No-op for this sampler */ }
 
     float next1D() {
         return m_random.nextFloat();
@@ -100,7 +104,6 @@ public:
         );
     }
 
-
     std::string toString() const {
         return fmt::format("Stratified");
     }
@@ -110,6 +113,9 @@ protected:
 
 private:
     pcg32 m_random;
+    int m_resolution;
+    float m_invSampleCount;
+    float m_invResolution;
 };
 
 

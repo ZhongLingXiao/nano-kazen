@@ -64,6 +64,7 @@ set( KAZEN_SOURCES
     include/kazen/define.h
     include/kazen/dpdf.h
     include/kazen/frame.h
+    include/kazen/hash.h
     include/kazen/integrator.h
     include/kazen/light.h
     include/kazen/medium.h

@@ -230,6 +230,51 @@ NAMESPACE_BEGIN(math)
 
 NAMESPACE_END(string)
 
+
+/// random
+NAMESPACE_BEGIN(random)
+    /**
+     * \brief Generate fast and reasonably good pseudorandom numbers using the
+     * Tiny Encryption Algorithm (TEA) by David Wheeler and Roger Needham.
+     *
+     * For details, refer to "GPU Random Numbers via the Tiny Encryption Algorithm"
+     * by Fahad Zafar, Marc Olano, and Aaron Curtis.
+     *
+     * \param v0
+     *     First input value to be encrypted (could be the sample index)
+     * \param v1
+     *     Second input value to be encrypted (e.g. the requested random number dimension)
+     * \param rounds
+     *     How many rounds should be executed? The default for random number
+     *     generation is 4.
+     * \return
+     *     A uniformly distributed 64-bit integer
+     */
+    uint64_t sampleTEA32(uint32_t v0, uint32_t v1, int rounds = 4);
+
+    /**
+     * \brief Generate pseudorandom permutation vector using the algorithm described in Pixar's
+     * technical memo "Correlated Multi-Jittered Sampling":
+     *
+     *     https://graphics.pixar.com/library/MultiJitteredSampling/
+     *
+     *  Unlike \ref permute, this function supports permutation vectors of any length.
+     *
+     * \param i
+     *     Input index to be mapped
+     * \param l
+     *     Length of the permutation vector or sample_count
+     * \param p
+     *     Seed value used as second input to the Tiny Encryption Algorithm. Can be used to
+     *     generate different permutation vectors.
+     * \return
+     *     The index corresponding to the input index in the pseudorandom permutation vector.
+     */
+    uint32_t permute(uint32_t i, uint32_t l, uint32_t p);
+
+NAMESPACE_END(random)
+
+
 /// Measures associated with probability distributions
 enum EMeasure {
     EUnknownMeasure = 0,

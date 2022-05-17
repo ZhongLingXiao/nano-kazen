@@ -57,7 +57,7 @@ public:
      * initialize the sampler so that repeated program runs
      * always create the same image.
      */
-    virtual void prepare(const ImageBlock &block) = 0;
+    virtual void prepare([[maybe_unused]] const ImageBlock &block) {}
 
     /**
      * \brief Prepare to generate new samples
@@ -65,10 +65,20 @@ public:
      * This function is called initially and every time the 
      * integrator starts rendering a new pixel.
      */
-    virtual void generate() = 0;
+    virtual void generate() {}
 
+    /**
+     * \brief Prepare to a new pixel sample
+     * 
+     * This function is called initially and every time the 
+     * integrator starts rendering a new pixel sample.
+     */
+    void generateSample([[maybe_unused]] Point2i p, 
+                        [[maybe_unused]] int sampleIndex, 
+                        [[maybe_unused]] int dimension=0) {}
+    
     /// Advance to the next sample
-    virtual void advance() = 0;
+    virtual void advance() {}
 
     /// Retrieve the next component value from the current sample
     virtual float next1D() = 0;
@@ -77,7 +87,7 @@ public:
     virtual Point2f next2D() = 0;
 
     /// Return the number of configured pixel samples
-    virtual size_t getSampleCount() const { return m_sampleCount; }
+    virtual uint32_t getSampleCount() const { return m_sampleCount; }
 
     /**
      * \brief Return the type of object (i.e. Mesh/Sampler/etc.) 
@@ -85,7 +95,14 @@ public:
      * */
     EClassType getClassType() const { return ESampler; }
 protected:
-    size_t m_sampleCount;
+    /// Base seed value
+    uint64_t m_seed;
+    /// Number of samples per pixel
+    uint32_t m_sampleCount;
+    /// Index of the current sample in the sequence
+    uint32_t m_sampleIndex;
+    /// Index of the current dimension in the sample
+    uint32_t m_dimensionIndex;
 };
 
 NAMESPACE_END(kazen)
