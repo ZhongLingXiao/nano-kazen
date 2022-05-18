@@ -27,11 +27,19 @@ public:
         return cloned;
     }
 
-    void prepare(const ImageBlock &block) {
-        m_random.seed(
-            block.getOffset().x(),
-            block.getOffset().y()
-        );
+    void prepare([[maybe_unused]] const ImageBlock &block) {
+        // m_random.seed(
+        //     block.getOffset().x(),
+        //     block.getOffset().y()
+        // );
+    }
+
+    /* No-op for this sampler */ 
+    void generate() {}
+    void advance() {}
+    void generateSample(Point2i p, int sampleIndex, int dimension=0) {
+        m_random.seed(Hash(p, m_seed));
+        m_random.advance(sampleIndex * 65536ull + dimension);
     }
 
     float next1D() {
@@ -75,9 +83,6 @@ public:
             LOG("Sample count should be square and power of two, rounding to {}", sqr(m_resolution));    
     
         m_sampleCount = sqr(m_resolution);
-        m_invSampleCount = 1.f / m_sampleCount;
-        m_invResolution = 1.f / m_resolution;
-
     }
 
     virtual ~Stratified() { }
@@ -87,21 +92,43 @@ public:
         cloned->m_seed              = m_seed;
         cloned->m_random            = m_random;
         cloned->m_sampleCount       = m_sampleCount;
-        cloned->m_invSampleCount    = m_invSampleCount;
         cloned->m_resolution        = m_resolution;
-        cloned->m_invResolution     = m_invResolution;
         return cloned;
     }
 
+    /* No-op for this sampler */
+    void prepare([[maybe_unused]] const ImageBlock &block) {}
+    void generate() {}
+    void advance() {}
+
+    void generateSample(Point2i p, int sampleIndex, int dimension=0) {
+        m_pixel = p;
+        m_sampleIndex = sampleIndex;
+        m_dimensionIndex = dimension;
+        m_random.seed(Hash(p, m_seed));
+        m_random.advance(sampleIndex * 65536ull + dimension);
+    }
+
     float next1D() {
-        return m_random.nextFloat();
+        /* Compute stratum index for current pixel and dimension */
+        uint64_t hash = Hash(m_pixel, m_dimensionIndex, m_seed);
+        int stratum = random::permute(m_sampleIndex, m_sampleCount, hash);
+
+        ++m_dimensionIndex;
+        float delta = m_random.nextFloat();
+        return (stratum + delta) / m_sampleCount;
     }
     
     Point2f next2D() {
-        return Point2f(
-            m_random.nextFloat(),
-            m_random.nextFloat()
-        );
+        /* Compute stratum index for current pixel and dimension */
+        uint64_t hash = Hash(m_pixel, m_dimensionIndex, m_seed);
+        int stratum = random::permute(m_sampleIndex, m_sampleCount, hash);
+
+        m_dimensionIndex += 2;
+        int x = stratum % m_resolution, y = stratum / m_resolution;
+        float dx = m_random.nextFloat();
+        float dy = m_random.nextFloat();
+        return {(x + dx) / m_resolution, (y + dy) / m_resolution};
     }
 
     std::string toString() const {
@@ -114,8 +141,7 @@ protected:
 private:
     pcg32 m_random;
     int m_resolution;
-    float m_invSampleCount;
-    float m_invResolution;
+    Point2i m_pixel;
 };
 
 

@@ -35,6 +35,7 @@
 #include <cmath>
 #include <cassert>
 #include <algorithm>
+#include <kazen/hash.h>
 
 /// PCG32 Pseudorandom number generator
 struct pcg32 {
@@ -50,12 +51,16 @@ struct pcg32 {
      * Specified in two parts: a state initializer and a sequence selection
      * constant (a.k.a. stream id)
      */
-    void seed(uint64_t initstate, uint64_t initseq = 1) {
+    void seed(uint64_t initstate, uint64_t initseq) {
         state = 0U;
         inc = (initseq << 1u) | 1u;
         nextUInt();
         state += initstate;
         nextUInt();
+    }
+
+    void seed( uint64_t initseq) {
+        seed(kazen::MixBits(initseq), initseq);
     }
 
     /// Generate a uniformly distributed unsigned 32-bit random number

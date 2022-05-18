@@ -1290,3 +1290,26 @@ https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/2022_q1_report
 支持全新 sampler 的框架，为后续 Stratified 或 PMJ02BN sampler 完成基础支持。
 
 `hash` 和 `Tiny Encryption Algorithm (TEA)` 的支持，用于随机数的 seed 更新，另外 `pcg32` 已经完成，与PBRT-v4 一摸一样。
+
+
+
+
+
+------
+
+
+
+`2022.5.19` **Stratified Sampler 支持**
+
+实现了与 `PBRT-v4` 的 `StratifiedSampler`，目前得到以下结论：
+
+1. 由于新的框架实现，从每个 block 更新 seed 变成逐个像素采样更新 seed；导致**性能下降约 5 % ~ 7 %**
+2. 从 Independent 更换为 Stratified 后，**性能下降 15 % ~ 23 %**
+
+
+
+> 结论：
+>
+> 1. 可以尝试 `mitsuba2` 的采样器框架，它的实现是每个像素更新 seed;
+> 2. Stratified 在 cbox 场景下肉眼无法区别，但是 veach 场景是可以看出来效果更好
+

@@ -57,7 +57,7 @@ public:
      * initialize the sampler so that repeated program runs
      * always create the same image.
      */
-    virtual void prepare([[maybe_unused]] const ImageBlock &block) {}
+    virtual void prepare(const ImageBlock &block) = 0;
 
     /**
      * \brief Prepare to generate new samples
@@ -65,7 +65,7 @@ public:
      * This function is called initially and every time the 
      * integrator starts rendering a new pixel.
      */
-    virtual void generate() {}
+    virtual void generate() = 0;
 
     /**
      * \brief Prepare to a new pixel sample
@@ -73,12 +73,10 @@ public:
      * This function is called initially and every time the 
      * integrator starts rendering a new pixel sample.
      */
-    void generateSample([[maybe_unused]] Point2i p, 
-                        [[maybe_unused]] int sampleIndex, 
-                        [[maybe_unused]] int dimension=0) {}
+    virtual void generateSample(Point2i p, int sampleIndex, int dimension=0) = 0;
     
     /// Advance to the next sample
-    virtual void advance() {}
+    virtual void advance() = 0;
 
     /// Retrieve the next component value from the current sample
     virtual float next1D() = 0;

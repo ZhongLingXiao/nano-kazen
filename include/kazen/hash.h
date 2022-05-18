@@ -36,16 +36,22 @@ inline uint64_t MurmurHash64A(const unsigned char *key, size_t len, uint64_t see
     switch (len & 7) {
     case 7:
         h ^= uint64_t(key[6]) << 48;
+        [[fallthrough]];
     case 6:
         h ^= uint64_t(key[5]) << 40;
+        [[fallthrough]];
     case 5:
         h ^= uint64_t(key[4]) << 32;
+        [[fallthrough]];
     case 4:
         h ^= uint64_t(key[3]) << 24;
+        [[fallthrough]];
     case 3:
         h ^= uint64_t(key[2]) << 16;
+        [[fallthrough]];
     case 2:
         h ^= uint64_t(key[1]) << 8;
+        [[fallthrough]];
     case 1:
         h ^= uint64_t(key[0]);
         h *= m;
@@ -83,7 +89,7 @@ template <typename... Args>
 inline void hashRecursiveCopy(char *buf, Args...);
 
 template <>
-inline void hashRecursiveCopy(char *buf) {}
+inline void hashRecursiveCopy([[maybe_unused]] char *buf) {}
 
 template <typename T, typename... Args>
 inline void hashRecursiveCopy(char *buf, T v, Args... args) {
