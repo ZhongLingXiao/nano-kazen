@@ -89,7 +89,7 @@ template <typename... Args>
 inline void hashRecursiveCopy(char *buf, Args...);
 
 template <>
-inline void hashRecursiveCopy([[maybe_unused]] char *buf) {}
+inline void hashRecursiveCopy(char *buf) {}
 
 template <typename T, typename... Args>
 inline void hashRecursiveCopy(char *buf, T v, Args... args) {

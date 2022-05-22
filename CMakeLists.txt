@@ -27,7 +27,8 @@ endif()
 
 
 ## C++17 ##
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall -Wextra")
+# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall -Wextra")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall -Wextra -Wno-sign-compare -Wno-unused")
 include(CheckCXXCompilerFlag)
 if (CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang|Emscripten|Intel)$")
   CHECK_CXX_COMPILER_FLAG("-std=c++17" HAS_CPP17_FLAG)
@@ -57,6 +58,7 @@ set( KAZEN_SOURCES
     include/kazen/bbox.h
     include/kazen/bitmap.h
     include/kazen/block.h
+    include/kazen/bluenoise.h
     include/kazen/bsdf.h
     include/kazen/camera.h
     include/kazen/color.h
@@ -72,6 +74,7 @@ set( KAZEN_SOURCES
     include/kazen/object.h
     include/kazen/parser.h
     include/kazen/pcg32.h
+    include/kazen/pmj02table.h
     include/kazen/progress.h
     include/kazen/proplist.h
     include/kazen/ray.h
@@ -89,6 +92,7 @@ set( KAZEN_SOURCES
     src/kazen/accel.cpp
     src/kazen/bitmap.cpp
     src/kazen/block.cpp
+    src/kazen/bluenoise.cpp
     src/kazen/bsdf.cpp
     src/kazen/camera.cpp
     src/kazen/common.cpp
@@ -98,6 +102,7 @@ set( KAZEN_SOURCES
     src/kazen/mesh.cpp
     src/kazen/object.cpp
     src/kazen/parser.cpp
+    src/kazen/pmj02table.cpp
     src/kazen/progress.cpp
     src/kazen/proplist.cpp
     src/kazen/renderer.cpp

@@ -1,6 +1,9 @@
 #include <kazen/sampler.h>
 #include <kazen/block.h>
 #include <kazen/pcg32.h>
+#include <kazen/common.h>
+#include <kazen/bluenoise.h>
+#include <kazen/pmj02table.h>
 
 NAMESPACE_BEGIN(kazen)
 
@@ -27,7 +30,7 @@ public:
         return cloned;
     }
 
-    void prepare([[maybe_unused]] const ImageBlock &block) {
+    void prepare( const ImageBlock &block) {
         // m_random.seed(
         //     block.getOffset().x(),
         //     block.getOffset().y()
@@ -51,6 +54,10 @@ public:
             m_random.nextFloat(),
             m_random.nextFloat()
         );
+    }
+
+    Point2f nextPixel2D() {
+        return next2D();
     }
 
     std::string toString() const {
@@ -97,7 +104,7 @@ public:
     }
 
     /* No-op for this sampler */
-    void prepare([[maybe_unused]] const ImageBlock &block) {}
+    void prepare( const ImageBlock &block) {}
     void generate() {}
     void advance() {}
 
@@ -129,6 +136,10 @@ public:
         float dx = m_random.nextFloat();
         float dy = m_random.nextFloat();
         return {(x + dx) / m_resolution, (y + dy) / m_resolution};
+    }
+
+    Point2f nextPixel2D() {
+        return next2D();
     }
 
     std::string toString() const {
@@ -189,7 +200,7 @@ public:
     }
 
     /* No-op for this sampler */
-    void prepare([[maybe_unused]] const ImageBlock &block) {}
+    void prepare( const ImageBlock &block) {}
     void generate() {}
     void advance() {}
 
@@ -239,6 +250,10 @@ public:
                 (y + (sx + jy)/m_resolution.x()) / m_resolution.y()};
     }
 
+    Point2f nextPixel2D() {
+        return next2D();
+    }
+
     std::string toString() const {
         return fmt::format("Correlated");
     }
@@ -253,8 +268,130 @@ private:
     uint32_t m_permutationSeed;
 };
 
+
+/// pmj02 blue noise
+class PMJ02BN : public Sampler {
+public:
+    PMJ02BN(const PropertyList &propList) {
+        m_seed = (uint64_t) propList.getInteger("seed", 1);
+        m_sampleCount = (uint32_t) propList.getInteger("sampleCount", 16);
+
+        if (!math::isPowerOf4(m_sampleCount))
+            LOG("PMJ02BNSampler results are best with power-of-4 samples per " 
+                "pixel (1, 4, 16, 64, ...)");
+
+        /* Get sorted pmj02bn samples for pixel samples */
+        if (m_sampleCount > nPMJ02bnSamples)
+            // TODO: Add Error message: PMJ02BNSampler only supports up to {nPMJ02bnSamples} samples per pixel
+            // TODO: remove this line
+            m_sampleCount = nPMJ02bnSamples;
+
+        /* Compute {m_pixelTileSize} for pmj02bn pixel samples and allocate {m_pixelSamples}
+           nPixelSamples should always be 65536 */
+        m_pixelTileSize = 1 << (math::log4i(nPMJ02bnSamples) - math::log4i(math::roundUpPow4(m_sampleCount)));
+        int nPixelSamples = m_pixelTileSize * m_pixelTileSize * m_sampleCount;
+        m_pixelSamples = std::make_shared<std::vector<Point2f>>(nPixelSamples);
+
+        /* Loop over pmj02bn samples and associate them with their pixels */
+        std::vector<int> nStored(m_pixelTileSize * m_pixelTileSize, 0);
+        for (int i = 0; i < nPMJ02bnSamples; ++i) {
+            Point2f p = getPMJ02BNSample(0, i);
+            p *= m_pixelTileSize;
+            int pixelOffset = int(p.x()) + int(p.y()) * m_pixelTileSize;
+            if (nStored[pixelOffset] == m_sampleCount) {
+                assert(!math::isPowerOf4(m_sampleCount));
+                continue;
+            }
+            int sampleOffset = pixelOffset * m_sampleCount + nStored[pixelOffset];
+            assert((*m_pixelSamples)[sampleOffset] == Point2f(0, 0));
+            (*m_pixelSamples)[sampleOffset] = p - Point2f(floor(p.x()), floor(p.y()));
+            ++nStored[pixelOffset];
+        }  
+
+        for (size_t i = 0; i < nStored.size(); ++i)
+            assert(nStored[i] == m_sampleCount);
+        for ( int c : nStored)
+            assert(c == m_sampleCount);
+    }
+
+    ~PMJ02BN() { }
+
+    std::unique_ptr<Sampler> clone() const {
+        std::unique_ptr<PMJ02BN> cloned(new PMJ02BN());
+        cloned->m_sampleCount   = m_sampleCount;
+        cloned->m_seed          = m_seed;
+        cloned->m_pixelTileSize = m_pixelTileSize;
+        cloned->m_pixelSamples  = m_pixelSamples;
+        return cloned;
+    }
+
+    /* No-op for this sampler */
+    void prepare( const ImageBlock &block) {}
+    void generate() {}
+    void advance() {}
+
+    void generateSample(Point2i p, int sampleIndex, int dimension=0) {
+        m_pixel = p;
+        m_sampleIndex = sampleIndex;
+        m_dimensionIndex = std::max(2, dimension);
+    }
+
+    float next1D() {
+        /* Find permuted sample index for 1D PMJ02BNSampler sample */
+        uint64_t hash = Hash(m_pixel, m_dimensionIndex, m_seed);
+        int index = random::permute(m_sampleIndex, m_sampleCount, hash);
+
+        float delta = getBlueNoise(m_dimensionIndex, m_pixel);
+        ++m_dimensionIndex;
+        return std::min((index + delta) / m_sampleCount, OneMinusEpsilon);
+    }
+
+    Point2f next2D() {    
+        /* Compute index for 2D pmj02bn sample */
+        int index = m_sampleIndex;
+        int pmjInstance = m_dimensionIndex / 2;
+        if (pmjInstance >= nPMJ02bnSets) {
+            // Permute index to be used for pmj02bn sample array
+            uint64_t hash = Hash(m_pixel, m_dimensionIndex, m_seed);
+            index = random::permute(m_sampleIndex, m_sampleCount, hash);
+        }
+
+        /* Return randomized pmj02bn sample for current dimension */
+        Point2f u = getPMJ02BNSample(pmjInstance, index);
+        
+        /* Apply Cranley-Patterson rotation to pmj02bn sample _u_ */
+        u += Vector2f(getBlueNoise(m_dimensionIndex, m_pixel), getBlueNoise(m_dimensionIndex+1, m_pixel));
+        if (u.x() >= 1)
+            u.x() -= 1;
+        if (u.y() >= 1)
+            u.y() -= 1;
+
+        m_dimensionIndex += 2;
+        return {std::min(u.x(), OneMinusEpsilon), std::min(u.y(), OneMinusEpsilon)};    
+    }
+
+    Point2f nextPixel2D() {
+        int px = m_pixel.x() % m_pixelTileSize, py = m_pixel.y() % m_pixelTileSize;
+        int offset = (px + py * m_pixelTileSize) * m_sampleCount;
+        return (*m_pixelSamples)[offset + m_sampleIndex];
+    }
+
+    std::string toString() const {
+        return fmt::format("PMJ02BN");
+    }
+
+protected:
+    PMJ02BN() { }
+
+private:
+    Point2i m_pixel;
+    int m_pixelTileSize;
+    std::shared_ptr<std::vector<Point2f>> m_pixelSamples;
+};
+
 KAZEN_REGISTER_CLASS(Independent, "independent");
 KAZEN_REGISTER_CLASS(Stratified, "stratified");
 KAZEN_REGISTER_CLASS(Correlated, "correlated");
+KAZEN_REGISTER_CLASS(PMJ02BN, "pmj02bn");
 
 NAMESPACE_END(kazen)

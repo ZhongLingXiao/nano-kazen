@@ -49,7 +49,7 @@ Point2f Warp::squareToUniformDisk(const Point2f &sample) {
     );
 }
 
-float Warp::squareToUniformDiskPdf([[maybe_unused]] const Point2f &p) {
+float Warp::squareToUniformDiskPdf( const Point2f &p) {
     return INV_PI;
 }
 
@@ -61,7 +61,7 @@ Vector3f Warp::squareToUniformSphere(const Point2f &sample) {
     return Vector3f(r * cosPhi, r * sinPhi, z);
 }
 
-float Warp::squareToUniformSpherePdf([[maybe_unused]] const Vector3f &v) {
+float Warp::squareToUniformSpherePdf( const Vector3f &v) {
     return INV_FOURPI;
 }
 
@@ -78,7 +78,7 @@ Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
         z);
 }
 
-float Warp::squareToUniformHemispherePdf([[maybe_unused]] const Vector3f &v) {
+float Warp::squareToUniformHemispherePdf( const Vector3f &v) {
     return INV_TWOPI;
 }
 

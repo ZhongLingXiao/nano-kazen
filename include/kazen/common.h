@@ -4,11 +4,15 @@
 #include <string>
 #include <vector>
 #include <map>
+// #include <bit>
+#include <type_traits>
 #include <iostream>
 #include <algorithm>
-#include <stdint.h>
 #include <limits>
+#include <stdint.h>
+#include <cstring>
 #include <cmath>
+#include <cassert>
 // 3rd
 #include <fmt/core.h>
 #include <Eigen/Core>
@@ -18,7 +22,8 @@
 
 
 /* "Ray epsilon": relative error threshold for ray intersection computations */
-#define Epsilon 1e-5f
+#define Epsilon 1e-5f // std::numeric_limits<Float>::epsilon()
+#define OneMinusEpsilon float(0x1.fffffep-1)
 
 /* A few useful constants */
 #undef M_PI
@@ -178,10 +183,37 @@ NAMESPACE_BEGIN(string)
 NAMESPACE_END(string)
 
 
+/// floating point
+NAMESPACE_BEGIN(floatingPoint)
+    template <class To, class From>
+    typename std::enable_if_t<sizeof(To) == sizeof(From) &&
+                                std::is_trivially_copyable_v<From> &&
+                                std::is_trivially_copyable_v<To>,
+                                To>
+    bit_cast(const From &src) noexcept {
+        static_assert(std::is_trivially_constructible_v<To>,
+                    "This implementation requires the destination type to be trivially "
+                    "constructible");
+        To dst;
+        std::memcpy(&dst, &src, sizeof(To));
+        return dst;
+    }
+
+    inline uint32_t floatToBits(float f) { return bit_cast<uint32_t>(f); }
+
+    inline float bitsToFloat(uint32_t ui) { return bit_cast<float>(ui); }
+
+    inline int exponent(float v) { return (floatToBits(v) >> 23) - 127; }
+
+    inline int significand(float v) { return floatToBits(v) & ((1 << 23) - 1); }
+
+NAMESPACE_END(floatingPoint)
+
+
 /// math
 NAMESPACE_BEGIN(math)
 
-    //// Convert radians to degrees
+    /// Convert radians to degrees
     inline float radToDeg(float value) { return value * (180.0f / M_PI); }
 
     /// Convert degrees to radians
@@ -228,7 +260,59 @@ NAMESPACE_BEGIN(math)
         return (r < 0) ? r+b : r;
     }
 
-NAMESPACE_END(string)
+    /// Check a given number is a power of four
+    inline bool isPowerOf4(int n) {   
+        auto isPerfectSqaure = [](int n) {
+            int x = std::sqrt(n);
+            return (x*x == n);
+        };
+
+        // If n <= 0, it is not the power of four
+        if(n <= 0)
+            return false;
+    
+        // Check whether 'n' is a perfect square or not
+        if(!isPerfectSqaure(n))
+            return false;
+        
+        // If 'n' is the perfect square
+        // Check for the second condition i.e. 'n' must be power of two
+        return !(n & (n-1));
+    }
+
+    ///
+    inline int log2i(float v) {
+        assert(v>0);
+
+        if (v < 1)
+            return -log2i(1 / v);
+        // https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog
+        // (With an additional check of the significant to get round-to-nearest
+        // rather than round down.)
+        // midsignif = Significand(std::pow(2., 1.5))
+        // i.e. grab the significand of a value halfway between two exponents,
+        // in log space.
+        const uint32_t midsignif = 0b00000000001101010000010011110011;
+        return floatingPoint::exponent(v) + 
+            (( floatingPoint::significand(v) >= midsignif) ? 1 : 0);
+    }
+
+    /// TODO: Because we use gcc builtin function __builtin_clz, 
+    /// for windows and mac we shoud use other functions
+    inline int log2i(uint32_t v) { return 31 - __builtin_clz(v); }
+    inline int log2i(uint64_t v) { return 63 - __builtin_clzll(v);}
+    inline int log2i(int32_t v) { return log2i((uint32_t)v); }
+    inline int log2i(int64_t v) { return log2i((uint64_t)v); }
+    
+    template <typename T> inline int log4i(T v) { return log2i(v) / 2; }
+    
+    /// Round up to number which is power of 4
+    template <typename T>
+    inline T roundUpPow4(T v) {
+        return isPowerOf4(v) ? v : (1 << (2 * (1 + log4i(v))));
+    }
+
+NAMESPACE_END(math)
 
 
 /// random

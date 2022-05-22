@@ -22,7 +22,7 @@ void renderSample(const Scene *scene, Sampler *sampler, ImageBlock &block, const
     const Camera *camera = scene->getCamera();
 
     /* Get pixel sample */
-    Point2f pixelSample = Point2f(float(pixelPosition.x()), float(pixelPosition.y())) + sampler->next2D();
+    Point2f pixelSample = Point2f(float(pixelPosition.x()), float(pixelPosition.y())) + sampler->nextPixel2D();
 
     /* Get random 2d */
     Point2f apertureSample = sampler->next2D();

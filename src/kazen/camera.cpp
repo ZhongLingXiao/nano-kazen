@@ -69,7 +69,7 @@ public:
 
     Color3f sampleRay(Ray3f &ray,
             const Point2f &samplePosition,
-            [[maybe_unused]] const Point2f &apertureSample) const {
+            const Point2f &apertureSample) const {
         /* Compute the corresponding position on the 
            near plane (in local camera space) */
         Point3f nearP = m_sampleToCamera * Point3f(

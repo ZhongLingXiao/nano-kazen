@@ -10,12 +10,12 @@ NAMESPACE_BEGIN(kazen)
 /// normals
 class NormalIntegrator : public Integrator {
 public:
-    NormalIntegrator([[maybe_unused]] const PropertyList &props) {
+    NormalIntegrator( const PropertyList &props) {
         /* No parameters this time */
         // LOG("intergrator: normal");
     }
 
-    Color3f Li(const Scene *scene, [[maybe_unused]] Sampler *sampler, const Ray3f &ray) const {
+    Color3f Li(const Scene *scene,  Sampler *sampler, const Ray3f &ray) const {
         /* Find the surface that is visible in the requested direction */
         Intersection its;
         if (!scene->rayIntersect(ray, its))
@@ -35,7 +35,7 @@ public:
 /// ao
 class AmbientOcclusionIntegrator : public Integrator {
 public:
-    AmbientOcclusionIntegrator([[maybe_unused]] const PropertyList &props) {
+    AmbientOcclusionIntegrator( const PropertyList &props) {
 
     }
     
@@ -72,7 +72,7 @@ private:
 /// Whitted
 class WhittedIntegrator : public Integrator {
 public:
-    WhittedIntegrator([[maybe_unused]] const PropertyList& props) {}
+    WhittedIntegrator( const PropertyList& props) {}
     
     Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {        
         Intersection its;
@@ -135,7 +135,7 @@ public:
 
 class PathMatsIntegrator : public Integrator {
 public:
-    PathMatsIntegrator([[maybe_unused]] const PropertyList &props) {}
+    PathMatsIntegrator( const PropertyList &props) {}
 
     Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &ray) const override {
         Color3f color = 0;

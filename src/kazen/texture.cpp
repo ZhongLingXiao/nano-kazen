@@ -13,7 +13,7 @@ public:
         m_color = props.getColor("color", Color3f(0.5f));
     }
 
-    Color3f eval([[maybe_unused]] const Point2f &uv) const override {
+    Color3f eval( const Point2f &uv) const override {
         return m_color;
     }
 
