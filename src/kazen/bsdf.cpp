@@ -55,7 +55,7 @@ public:
     }
 
     /// Draw a a sample from the BRDF model
-    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
+    Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const {
         if (Frame::cosTheta(bRec.wi) <= 0)
             return Color3f(0.0f);
 
@@ -63,7 +63,7 @@ public:
 
         /* Warp a uniformly distributed sample on [0,1]^2
            to a direction on a cosine-weighted hemisphere */
-        bRec.wo = Warp::squareToCosineHemisphere(sample);
+        bRec.wo = Warp::squareToCosineHemisphere(sample2);
 
         /* Relative index of refraction: no change */
         bRec.eta = 1.0f;
@@ -102,6 +102,7 @@ public:
 
         /* Exterior IOR (default: air) */
         m_extIOR = propList.getFloat("extIOR", 1.000277f);
+
     }
 
     Color3f eval(const BSDFQueryRecord &) const {
@@ -114,13 +115,13 @@ public:
         return 1.0f;
     }
 
-    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
+    Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const {
         bRec.measure = EDiscrete;
 
         auto cosThetaI = Frame::cosTheta(bRec.wi);
         auto fresnelTerm = fresnel(cosThetaI, m_extIOR, m_intIOR);
 
-        if (sample.x() < fresnelTerm) {
+        if (sample1 < fresnelTerm) {
             /* Reflect wo = -wi + 2*dot(wi, n)*n. In this case is much simpler:
             https://www.pbr-book.org/3ed-2018/Reflection_Models/Specular_Reflection_and_Transmission*/
             bRec.wo = Vector3f(-bRec.wi.x(), -bRec.wi.y(), bRec.wi.z());
@@ -170,7 +171,7 @@ public:
         return 1.0f;
     }
 
-    Color3f sample(BSDFQueryRecord &bRec, const Point2f &) const {
+    Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const {
         if (Frame::cosTheta(bRec.wi) <= 0) 
             return Color3f(0.0f);
 
@@ -235,15 +236,15 @@ public:
         return INV_PI * Frame::cosTheta(bRec.wo);       
     }
 
-    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const override {
+    Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const override {
         if (Frame::cosTheta(bRec.wi) <= 0)
             return Color3f(0.0f);
 
         bRec.measure = ESolidAngle;
 
-        /* Warp a uniformly distributed sample on [0,1]^2
+        /* Warp a uniformly distributed sample2 on [0,1]^2
            to a direction on a cosine-weighted hemisphere */
-        bRec.wo = Warp::squareToCosineHemisphere(sample);
+        bRec.wo = Warp::squareToCosineHemisphere(sample2);
 
         /* Relative index of refraction: no change */
         bRec.eta = 1.0f;
@@ -333,14 +334,14 @@ public:
         return m_nested->pdf(perturbedQuery);        
     }
 
-    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const override {
+    Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const override {
         const Intersection &its = bRec.its;
         Color3f rgb = m_normalMap->eval(its.uv);
         Vector3f n(2*rgb.r()-1, 2*rgb.g()-1, 2*rgb.b()-1);
     
 		if (Frame::cosTheta(bRec.wi) > 0 && n.dot(bRec.wi) <= 0) {
 			bRec.eta = 1.0f;
-			return m_nested->sample(bRec, sample);
+			return m_nested->sample(bRec, sample1, sample2);
 		}
 
 		Intersection perturbed(its);
@@ -350,7 +351,7 @@ public:
         perturbedQuery.uv = its.uv;
         perturbedQuery.measure = bRec.measure;
         perturbedQuery.eta = bRec.eta;
-        Color3f result = m_nested->sample(perturbedQuery, sample);
+        Color3f result = m_nested->sample(perturbedQuery, sample1, sample2);
         if (!result.isZero()) {
             bRec.wo = its.toLocal(perturbed.toWorld(perturbedQuery.wo));
 			bRec.eta = perturbedQuery.eta;
@@ -651,11 +652,11 @@ public:
         return computeGGXSmithPDF(bRec.wi, H, alpha) / denom;
     }
 
-    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
+    Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const {
         if (Frame::cosTheta(bRec.wi) <= 0)
             return Color3f(0.0f);
         Color3f albedo = m_albedo->eval(bRec.uv);            
-        Color3f color = sampleGGXSmithBRDF(bRec.wi, albedo, m_roughness, m_anisotropy, sample, bRec.wo, bRec.pdf);
+        Color3f color = sampleGGXSmithBRDF(bRec.wi, albedo, m_roughness, m_anisotropy, sample2, bRec.wo, bRec.pdf);
         
         if (Frame::cosTheta(bRec.wo) <= 0)
             return Color3f(0.0f);
@@ -730,26 +731,26 @@ public:
     }
 
     /// Evaluate Smith's shadowing-masking function G1 
-    float smithBeckmannG1(const Vector3f &v, const Normal3f &m) const {
-        float tanTheta = Frame::tanTheta(v);
+    float smithBeckmannG1(const Vector3f &v, const Normal3f &m, float alpha) const {
+        /* Ensure consistent orientation (can't see the back
+           of the microfacet from the front and vice versa) */        
+        if (v.dot(m) * Frame::cosTheta(v) <= 0.0f)
+            return 0.0f;
 
         /* Perpendicular incidence -- no shadowing/masking */
+        float tanTheta = std::abs(Frame::tanTheta(v));
         if (tanTheta == 0.0f)
             return 1.0f;
 
-        /* Can't see the back side from the front and vice versa */
-        if (m.dot(v) * Frame::cosTheta(v) <= 0)
-            return 0.0f;
-
-        float a = 1.0f / (m_alpha * tanTheta);
+        float a = 1.0f / (alpha * tanTheta);
         if (a >= 1.6f)
             return 1.0f;
-        float a2 = a * a;
 
         /* Use a fast and accurate (<0.35% rel. error) rational
            approximation to the shadowing-masking function */
-        return (3.535f * a + 2.181f * a2) 
-             / (1.0f + 2.276f * a + 2.577f * a2);
+        float aSqr = a*a;
+        return (3.535f * a + 2.181f * aSqr)
+             / (1.0f + 2.276f * a + 2.577f * aSqr);
     }
 
     /// Evaluate the BRDF for the given pair of directions
@@ -760,7 +761,7 @@ public:
         
         Color3f F = fresnelCond(wh.dot(bRec.wo), m_eta, m_k);
         float D = evalBeckmann(wh);
-        float G = smithBeckmannG1(bRec.wi, wh) * smithBeckmannG1(bRec.wo,wh);
+        float G = smithBeckmannG1(bRec.wi, wh, m_alpha) * smithBeckmannG1(bRec.wo, wh, m_alpha);
         
         return D * F * G / (4.f * Frame::cosTheta(bRec.wi));
     }
@@ -776,11 +777,11 @@ public:
     }
 
     /// Sample the BRDF
-    virtual Color3f sample(BSDFQueryRecord &bRec, const Point2f &_sample) const override {
+    virtual Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const override {
         if (Frame::cosTheta(bRec.wi) <= 0)
             return Color3f(0.0f);
         
-        Point2f sample = _sample;
+        Point2f sample = sample2;
         Vector3f wh = Warp::squareToBeckmann(sample, m_alpha);
         bRec.wo = reflect(bRec.wi, wh).normalized();
         if (Frame::cosTheta(bRec.wo) <= 0)
@@ -846,27 +847,26 @@ public:
     }
 
     /// Evaluate Smith's shadowing-masking function G1 
-    float smithBeckmannG1(const Vector3f &v, const Normal3f &m) const {
-        float tanTheta = Frame::tanTheta(v);
+    float smithBeckmannG1(const Vector3f &v, const Normal3f &m, float alpha) const {
+        /* Ensure consistent orientation (can't see the back
+           of the microfacet from the front and vice versa) */        
+        if (v.dot(m) * Frame::cosTheta(v) <= 0.0f)
+            return 0.0f;
 
-        /* Perpendicular inci		return 0.0f;
-         * dence -- no shadowing/masking */
+        /* Perpendicular incidence -- no shadowing/masking */
+        float tanTheta = std::abs(Frame::tanTheta(v));
         if (tanTheta == 0.0f)
             return 1.0f;
 
-        /* Can't see the back side from the front and vice versa */
-        if (m.dot(v) * Frame::cosTheta(v) <= 0)
-            return 0.0f;
-
-        float a = 1.0f / (m_alpha * tanTheta);
+        float a = 1.0f / (alpha * tanTheta);
         if (a >= 1.6f)
             return 1.0f;
-        float a2 = a * a;
 
         /* Use a fast and accurate (<0.35% rel. error) rational
            approximation to the shadowing-masking function */
-        return (3.535f * a + 2.181f * a2) 
-             / (1.0f + 2.276f * a + 2.577f * a2);
+        float aSqr = a*a;
+        return (3.535f * a + 2.181f * aSqr)
+             / (1.0f + 2.276f * a + 2.577f * aSqr);
     }
 
     /// Evaluate the BRDF for the given pair of directions
@@ -877,7 +877,7 @@ public:
         Vector3f wh = (bRec.wi + bRec.wo).normalized();
 		float D = evalBeckmann(wh);
 		float F = fresnel((wh.dot(bRec.wo)), m_extIOR, m_intIOR);
-		float G = (smithBeckmannG1(bRec.wo, wh) * smithBeckmannG1(bRec.wi, wh));
+		float G = smithBeckmannG1(bRec.wo, wh, m_alpha) * smithBeckmannG1(bRec.wi, wh, m_alpha);
 
 		return m_kd * INV_PI * Frame::cosTheta(bRec.wo) + m_ks * (D * F * G) 
 			/ (4.f * Frame::cosTheta(bRec.wi));
@@ -898,17 +898,15 @@ public:
 	}
 
     /// Sample the BRDF
-    virtual Color3f sample(BSDFQueryRecord &bRec, const Point2f &_sample) const override {
+    virtual Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const override {
 		if (Frame::cosTheta(bRec.wi) <= 0)
 			return Color3f(0.0f);
 
-		if (_sample.x() < m_ks) {
-			Point2f sample(_sample.x() / m_ks, _sample.y());
-			Vector3f wh = Warp::squareToBeckmann(sample, m_alpha);
+		if (sample1 < m_ks) {
+			Vector3f wh = Warp::squareToBeckmann(sample2, m_alpha);
 			bRec.wo = ((2.f * wh.dot(bRec.wi) * wh) - bRec.wi).normalized();
 		} else {
-			Point2f sample((_sample.x() - m_ks) / (1 - m_ks), _sample.y());
-			bRec.wo = Warp::squareToCosineHemisphere(sample);
+			bRec.wo = Warp::squareToCosineHemisphere(sample2);
 		}
 
 		if (Frame::cosTheta(bRec.wo) <= 0)
@@ -941,7 +939,208 @@ private:
     Color3f m_kd;
 };
 
+
 /// TODO: Rough Dielectric
+class RoughDielectric : public BSDF {
+public:
+    RoughDielectric(const PropertyList &propList) {
+        /* Interior IOR (default: BK7 borosilicate optical glass) */
+        m_intIOR = propList.getFloat("intIOR", 1.5046f);
+
+        /* Exterior IOR (default: air) */
+        m_extIOR = propList.getFloat("extIOR", 1.000277f);
+
+        /* RMS surface roughness */
+        float roughness = propList.getFloat("roughness", 0.1f);   
+        float MIN_ALPHA = 0.001f;
+        m_alpha = std::max(MIN_ALPHA, sqr(roughness));
+        
+        m_eta = m_intIOR / m_extIOR;
+        m_invEta = m_extIOR / m_intIOR;  
+    }
+
+    /// Evaluate the BRDF for the given pair of directions
+    virtual Color3f eval(const BSDFQueryRecord &bRec) const override {
+        if (Frame::cosTheta(bRec.wi) == 0)
+            return Color3f(0.0f);
+
+        float cosThetaI = Frame::cosTheta(bRec.wi);
+        float cosThetaO = Frame::cosTheta(bRec.wo);
+
+        /* Determine the type of interaction */
+        bool reflect = cosThetaI * cosThetaO > 0.f;
+        
+        /* Determine the relative index of refraction */
+        float eta = cosThetaI > 0.f ? m_eta : m_invEta;
+        float invEta = cosThetaI > 0.f ? m_invEta : m_eta;
+
+        /* Compute the half-vector */
+        Vector3f wm;
+        if (reflect) {
+            wm = (bRec.wi + bRec.wo).normalized();
+        } else {
+            wm = (bRec.wi + bRec.wo*eta).normalized();
+        }
+
+        /* Ensure that the half-vector points into the
+           same hemisphere as the macrosurface normal */
+        wm *= math::sign(Frame::cosTheta(wm));
+
+        /* Compute the F D G */
+		float F = fresnelDielectric(bRec.wi.dot(wm), m_eta);
+		float D = evalBeckmann(wm, m_alpha);
+		float G = smithBeckmannG1(bRec.wo, wm, m_alpha) * smithBeckmannG1(bRec.wi, wm, m_alpha);
+
+        if (reflect) {
+            // float fr = std::abs((F * G * D)/ (4.f * std::abs(cosThetaI)));
+            float fr = (F * G * D)/ (4.f * std::abs(cosThetaI));
+            return Color3f(fr);
+        } else {            
+            /* Calculate the total amount of transmission */
+            float sqrtDenom = bRec.wi.dot(wm) + eta * bRec.wo.dot(wm);
+            float value = ((1 - F) * D * G * eta * eta * bRec.wi.dot(wm) * bRec.wo.dot(wm)) /
+                (cosThetaI * sqrtDenom * sqrtDenom);
+
+            return std::abs(value);
+        }
+    }
+
+    /// Evaluate the sampling density of \ref sample() wrt. solid angles
+    virtual float pdf(const BSDFQueryRecord &bRec) const override {
+        float cosThetaI = Frame::cosTheta(bRec.wi);
+        float cosThetaO = Frame::cosTheta(bRec.wo);
+
+        /* Determine the type of interaction */
+        bool reflect = cosThetaI * cosThetaO > 0.f;
+
+        /* Determine the relative index of refraction */
+        float eta = cosThetaI > 0.f ? m_eta : m_invEta;    
+    
+        Vector3f wm;
+        float dwm_dwo;
+
+        if (reflect) {
+            wm = (bRec.wi + bRec.wo).normalized();
+            /* Jacobian of the half-direction mapping */
+            dwm_dwo = 1.0f / (4.0f * bRec.wo.dot(wm));
+        } else {
+            wm = (bRec.wi + bRec.wo * eta).normalized();
+            /* Jacobian of the half-direction mapping */
+            float sqrtDenom = bRec.wi.dot(wm) + eta * bRec.wo.dot(wm);
+            dwm_dwo = (eta*eta * bRec.wo.dot(wm)) / (sqrtDenom*sqrtDenom);
+        }
+
+        /* Ensure that the half-vector points into the
+           same hemisphere as the macrosurface normal */
+        wm *= math::sign(Frame::cosTheta(wm));
+
+        float F = fresnelDielectric(bRec.wi.dot(wm), m_eta);
+        float D = evalBeckmann(wm, m_alpha);
+
+        float prob = D * Frame::cosTheta(wm);
+        prob *= reflect ? F : (1-F);
+
+        return std::abs(prob * dwm_dwo);
+    }
+
+    /// Sample the BRDF
+    virtual Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const override {
+        /* Trick by Walter et al.: slightly scale the roughness values to
+        reduce importance sampling weights. Not needed for the
+        Heitz and D'Eon sampling technique. */
+        float alpha = m_alpha * ( 1.2f - 0.2f * std::sqrt(std::abs(Frame::cosTheta(bRec.wi))));
+        
+        // sample the mirco scale normal
+        Vector3f wm = Warp::squareToBeckmann(sample2, alpha);
+
+        // check pdf weather is zero
+        // float pdf = evalBeckmann(wm, alpha) * Frame::cosTheta(wm);
+        float pdf = Warp::squareToBeckmannPdf(wm, alpha);
+        if (pdf == 0.f) return Color3f(0.f);
+
+        float cosThetaT;
+        float F = fresnelDielectric(bRec.wi.dot(wm), m_eta, cosThetaT);
+
+        bool sampleReflection = true;
+        if(sample1 > F) {
+            sampleReflection = false;
+        }
+
+        if (sampleReflection) {
+            bRec.wo = reflect(bRec.wi, wm);
+            bRec.eta = 1.0f;
+            /* Side check */
+            if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) <= 0)
+                return Color3f(0.0f);
+        } else {
+            if (cosThetaT == 0)
+                return Color3f(0.0f);
+            bRec.wo = refract(bRec.wi, wm, m_eta, cosThetaT);
+            bRec.eta = cosThetaT < 0.f ? m_eta : m_invEta;
+
+            /* Side check */
+            if (Frame::cosTheta(bRec.wi) * Frame::cosTheta(bRec.wo) >= 0)
+                return Color3f(0.0f);
+        }
+        
+		float D = evalBeckmann(wm, alpha);
+		float G = smithBeckmannG1(bRec.wo, wm, alpha) * smithBeckmannG1(bRec.wi, wm, alpha);
+
+        return std::abs(D * G * bRec.wi.dot(wm) / (pdf * Frame::cosTheta(bRec.wi)));
+    }
+
+    /// Evaluate the microfacet normal distribution D
+    float evalBeckmann(const Normal3f &m, float alpha) const {
+        float temp = Frame::tanTheta(m) / alpha,
+              ct = Frame::cosTheta(m), ct2 = ct*ct;
+
+        return std::exp(-temp*temp) 
+            / (M_PI * alpha * alpha * ct2 * ct2);
+    }
+
+    /// Evaluate Smith's shadowing-masking function G1 
+    float smithBeckmannG1(const Vector3f &v, const Normal3f &m, float alpha) const {
+        /* Ensure consistent orientation (can't see the back
+           of the microfacet from the front and vice versa) */        
+        if (v.dot(m) * Frame::cosTheta(v) <= 0.0f)
+            return 0.0f;
+
+        /* Perpendicular incidence -- no shadowing/masking */
+        float tanTheta = std::abs(Frame::tanTheta(v));
+        if (tanTheta == 0.0f)
+            return 1.0f;
+
+        float a = 1.0f / (alpha * tanTheta);
+        if (a >= 1.6f)
+            return 1.0f;
+
+        /* Use a fast and accurate (<0.35% rel. error) rational
+           approximation to the shadowing-masking function */
+        float aSqr = a*a;
+        return (3.535f * a + 2.181f * aSqr)
+             / (1.0f + 2.276f * a + 2.577f * aSqr);
+    }
+
+    static Vector3f refract(const Vector3f &wi, const Vector3f &n, float eta, float cosThetaT) {
+        if (cosThetaT < 0)
+            eta = 1.f / eta;
+
+        return n * (wi.dot(n) * eta + cosThetaT) - wi * eta;
+    }
+
+    std::string toString() const {
+        return fmt::format(
+            "RoughDielectric"
+        );
+    }
+
+private:
+    float m_intIOR, m_extIOR;
+    float m_eta, m_invEta;
+    float m_alpha; 
+   
+};
+
 
 
 /// kazen innercircle standard surface (kiss)
@@ -1061,7 +1260,7 @@ public:
                 (1.f-diffuse) * (GTR2*specPdf + (1.f-GTR2)*clearcoatPdf);  
     }
 
-    Color3f sample(BSDFQueryRecord &bRec, const Point2f &_sample) const override {
+    Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const override {
         if (Frame::cosTheta(bRec.wi) <= 0)
             return Color3f(0.0f);
 
@@ -1073,25 +1272,22 @@ public:
         float diffuse = (1.f - metallic) * 0.5f;
         // float diffuse = m_baseColor->eval(bRec.uv).maxCoeff();
 
-		if (_sample.x() < diffuse) {
-            auto sample = Point2f(_sample.x()/diffuse, _sample.y());
-            bRec.wo = Warp::squareToCosineHemisphere(sample);
+		if (sample1 < diffuse) {
+            bRec.wo = Warp::squareToCosineHemisphere(sample2);
 		} else {
-			auto sample = Point2f((_sample.x()-diffuse) / (1.f-diffuse), _sample.y());
+			// auto sample = Point2f((_sample.x()-diffuse) / (1.f-diffuse), _sample.y());
+            auto sample = (sample1-diffuse) / (1.f-diffuse);
             float GTR2 = 1.f / (1.f + m_clearcoat);
             
             Vector3f H;
-            Point2f sample1;
             bool flip = bRec.wi.z() <= 0.f;
-            if (sample.x() < GTR2) {
-                sample1 = Point2f(sample.x() / GTR2, sample.y());
+            if (sample < GTR2) {
                 auto roughness = m_roughness->eval(bRec.uv).r();
                 Vector2f alpha = roughnessToAlpha(roughness, m_anisotropy);
-                H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample1);
+                H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample2);
             } else {
-                sample1 = Point2f((sample.x()-GTR2) / (1.f-GTR2), sample.y());
                 Vector2f alpha = roughnessToAlpha(math::lerp(m_clearcoatRoughness, 0.01f, .3f), 0.f);
-                H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample1);
+                H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample2);
             }
             H = flip ? -H : H;
             // Reflect the view direction across the microfacet normal to get the sample direction.
@@ -1162,6 +1358,6 @@ KAZEN_REGISTER_CLASS(NormalMap, "normalmap");
 KAZEN_REGISTER_CLASS(GGX, "ggx");
 KAZEN_REGISTER_CLASS(RoughConductor, "roughconductor");
 KAZEN_REGISTER_CLASS(RoughPlastic, "roughplastic");
-// KAZEN_REGISTER_CLASS(RoughDieletric, "roughdieletric");
+KAZEN_REGISTER_CLASS(RoughDielectric, "roughdielectric");
 KAZEN_REGISTER_CLASS(KazenStandardSurface, "kazenstandard");
 NAMESPACE_END(kazen)

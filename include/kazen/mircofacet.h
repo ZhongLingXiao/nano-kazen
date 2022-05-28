@@ -126,7 +126,7 @@ float computeGGXSmithPDF(Vector3f V, Vector3f H, Vector2f alpha) {
     return evaluateGGXSmithVNDF(V, H, alpha);
 }
 
-// Evaluates the GGX-Smith glossy BRDF, returning the BRDF value along with the Fresnel term used.
+// Evaluates the GGX-Smith glossy BRDF, returning the value without the Fresnel term.
 Color3f evaluateGGXSmith(Vector3f V, Vector3f L, float roughness, float anisotropy) {
     // Return black if the view and light directions are in opposite hemispheres.
     if (V.z() * L.z() < 0.0f)
@@ -135,7 +135,7 @@ Color3f evaluateGGXSmith(Vector3f V, Vector3f L, float roughness, float anisotro
     // Convert roughness and anisotropy to alpha values.
     Vector2f alpha = roughnessToAlpha(roughness, anisotropy);
 
-    // Compute the D (NDF), G (visibility), and F (Fresnel) terms, along with the microfacet BRDF
+    // Compute the D (NDF) and G (visibility) terms, along with the microfacet BRDF
     // denominator.
     Vector3f H  = (V + L).normalized();
     float D     = evaluateGGXNDF(H, alpha);

@@ -118,7 +118,7 @@ public:
             return Li;
         } else {
             BSDFQueryRecord bRec(its.toLocal(-ray.d));
-            Color3f reflect = its.mesh->getBSDF()->sample(bRec, sampler->next2D());
+            Color3f reflect = its.mesh->getBSDF()->sample(bRec, sampler->next1D(), sampler->next2D());
             if (sampler->next1D() < 0.95) {
                 return reflect * Li(scene, sampler, Ray3f(its.p, its.toWorld(bRec.wo))) / 0.95;
             } else {
@@ -164,7 +164,7 @@ public:
             //BSDF
             BSDFQueryRecord bRec(its.shFrame.toLocal(-rayRecursive.d));
             bRec.uv = its.uv;
-            Color3f f = its.mesh->getBSDF()->sample(bRec, sampler->next2D());
+            Color3f f = its.mesh->getBSDF()->sample(bRec, sampler->next1D(), sampler->next2D());
             t *= f;
 
            //continue recursion
@@ -257,7 +257,7 @@ public:
             BSDFQueryRecord bRec(its.shFrame.toLocal(-ray.d));
             bRec.uv = its.uv;
             bRec.its = its;
-            auto bsdfColor = its.mesh->getBSDF()->sample(bRec, sampler->next2D()); // Sample BSDF * cos(theta)
+            auto bsdfColor = its.mesh->getBSDF()->sample(bRec, sampler->next1D(), sampler->next2D()); // Sample BSDF * cos(theta)
             throughput *= bsdfColor;
             eta *= bRec.eta;
 

@@ -62,8 +62,14 @@ public:
      * value of the BSDF * cos(theta_o) divided by the probability density
      * of the sample with respect to solid angles).
      *
-     * \param bRec    A BSDF query record
-     * \param sample  A uniformly distributed sample on \f$[0,1]^2\f$
+     * \param bRec    
+     *      A BSDF query record
+     * \param sample1  
+     *      AA uniformly distributed sample on \f$[0,1]\f$. It is used
+     *      to select the BSDF lobe in multi-lobe models.
+     * \param sample2  
+     *      A uniformly distributed sample on \f$[0,1]^2\f$. It is
+     *      used to generate the sampled direction.
      *
      * \return The BSDF value divided by the probability density of the sample
      *         sample. The returned value also includes the cosine
@@ -71,7 +77,7 @@ public:
      *         when this is appropriate. A zero value means that sampling
      *         failed.
      */
-    virtual Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const = 0;
+    virtual Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const = 0;
 
     /**
      * \brief Evaluate the BSDF for a pair of directions and measure

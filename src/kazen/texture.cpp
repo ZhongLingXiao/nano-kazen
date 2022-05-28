@@ -37,15 +37,17 @@ public:
         m_filename = OIIO::ustring(filePath.str());     
         m_colorspace = propList.getString("colorspace", "srgb");
         m_scale = propList.getFloat("scale", 1.0f);
-        m_options.swrap = OIIO::TextureOpt::WrapPeriodic;
-        m_options.twrap = OIIO::TextureOpt::WrapPeriodic;
     }
 
-    Color3f eval(const Point2f &uv) const override {    
+    Color3f eval(const Point2f &uv) const override {
+        OIIO::TextureOpt options;
+        options.swrap = OIIO::TextureOpt::WrapPeriodic;
+        options.twrap = OIIO::TextureOpt::WrapPeriodic;
+
         float color[3] = {0.5f, 0.5f, 1.0f};
         getTextureSystem()->texture(
             m_filename,
-            m_options,
+            options,
             uv.x()*m_scale, (1.0f-uv.y())*m_scale,
             0, 0, 0, 0,
             3, &color[0]);  
@@ -57,13 +59,16 @@ public:
         return Color3f(color[0], color[1], color[2]);
     } 
 
-    Color3f eval(const Vector3f &dir_) const override {         
+    Color3f eval(const Vector3f &dir_) const override {
+        OIIO::TextureOpt options;
+        options.swrap = OIIO::TextureOpt::WrapPeriodic;
+        options.twrap = OIIO::TextureOpt::WrapPeriodic;
+
         float color[3] = {0.0f, 0.0f, 0.0f};
         Imath::V3f dir(dir_.x(), dir_.y(), dir_.z());
-        
         getTextureSystem()->environment(
             m_filename,
-            m_options,
+            options,
             dir,
             Imath::V3f(0.f), Imath::V3f(0.f),
             3, &color[0]);  
@@ -84,7 +89,6 @@ public:
 
 private:
     OIIO::ustring m_filename;
-    OIIO::TextureOpt m_options;
     std::string m_colorspace;
     float m_scale;
 };

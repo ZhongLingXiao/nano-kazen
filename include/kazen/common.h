@@ -260,6 +260,11 @@ NAMESPACE_BEGIN(math)
         return (r < 0) ? r+b : r;
     }
 
+    /// sign function
+    inline float sign(float v) {
+        return (v > 0.f) ? 1.f : -1.f;
+    }
+
     /// Check a given number is a power of four
     inline bool isPowerOf4(int n) {   
         auto isPerfectSqaure = [](int n) {
@@ -385,6 +390,44 @@ extern Point2f sphericalCoordinates(const Vector3f &dir);
  *      Refractive index of the interior
  */
 extern float fresnel(float cosThetaI, float extIOR, float intIOR);
+
+/**
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface between two dielectrics
+ *
+ * This is a basic implementation that just returns the value of
+ * \f[
+ * R(\cos\theta_i,\cos\theta_t,\eta)=\frac{1}{2} \left[
+ * \left(\frac{\eta\cos\theta_i-\cos\theta_t}{\eta\cos\theta_i+\cos\theta_t}\right)^2+
+ * \left(\frac{\cos\theta_i-\eta\cos\theta_t}{\cos\theta_i+\eta\cos\theta_t}\right)^2
+ * \right]
+ * \f]
+ * The transmitted direction must be provided. There is no logic pertaining to
+ * total internal reflection or negative direction cosines.
+ *
+ * \param cosThetaI
+ *      Absolute cosine of the angle between the normal and the incident ray
+ * \param eta
+ *      Relative refractive index to the transmitted direction
+ * \param cosThetaT
+ *      Absolute cosine of the angle between the normal and the transmitted ray
+ */
+extern float fresnelDielectric(float cosThetaI, float eta, float &cosThetaT);
+
+/**
+ * \brief Calculates the unpolarized Fresnel reflection coefficient
+ * at a planar interface between two dielectrics (extended version)
+ *
+ * This is just a convenience wrapper function around the other \c fresnelDielectricExt
+ * function, which does not return the transmitted direction cosine in case it is
+ * not needed by the application.
+ *
+ * \param cosThetaI
+ *      Cosine of the angle between the normal and the incident ray
+ * \param eta
+ *      Relative refractive index
+ */
+extern float fresnelDielectric(float cosThetaI, float eta);
 
 /// refraction coefficient
 extern Vector3f refract(const Vector3f &wi, const Vector3f &n, float eta);

@@ -475,6 +475,38 @@ float fresnel(float cosThetaI, float extIOR, float intIOR) {
     return (Rs * Rs + Rp * Rp) / 2.0f;
 }
 
+float fresnelDielectric(float cosThetaI_, float eta, float &cosThetaT_) {
+    /* Using Snell's law, calculate the squared sine of the
+       angle between the normal and the transmitted ray */
+    float scale = (cosThetaI_ > 0.f) ? 1/eta : eta,
+          cosThetaTSqr = 1 - (1-cosThetaI_*cosThetaI_) * (scale*scale);
+
+    /* Check for total internal reflection */
+    if (cosThetaTSqr <= 0.0f) {
+        cosThetaT_ = 0.0f;
+        return 1.0f;
+    }
+
+    /* Find the absolute cosines of the incident/transmitted rays */
+    float cosThetaI = std::abs(cosThetaI_);
+    float cosThetaT = std::sqrt(cosThetaTSqr);
+
+    float Rs = (cosThetaI - eta * cosThetaT)
+             / (cosThetaI + eta * cosThetaT);
+    float Rp = (eta * cosThetaI - cosThetaT)
+             / (eta * cosThetaI + cosThetaT);
+
+    cosThetaT_ = (cosThetaI_ > 0) ? -cosThetaT : cosThetaT;
+
+    /* No polarization -- return the unpolarized reflectance */
+    return 0.5f * (Rs * Rs + Rp * Rp);
+}
+
+float fresnelDielectric(float cosThetaI, float eta) {
+    float cosThetaT;
+    return fresnelDielectric(cosThetaI, eta, cosThetaT);
+}
+
 Vector3f refract(const Vector3f &wi, const Vector3f &n, float eta) {
     auto cosThetaI = wi.dot(n);
     if (cosThetaI < 0)
