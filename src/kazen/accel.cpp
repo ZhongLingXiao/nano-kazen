@@ -1,6 +1,7 @@
 #include <kazen/accel.h>
 #include <kazen/timer.h>
 #include <kazen/bsdf.h>
+#include <kazen/light.h>
 #include <Eigen/Geometry>
 
 NAMESPACE_BEGIN(kazen)
@@ -96,8 +97,11 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
     /* intersect ray with scene */
     rtcIntersect1(m_scene, &context, &rayhit);
     if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
-        if (shadowRay) // trace shadow ray
+        if (shadowRay) { // trace shadow ray
+            its.t = rayhit.ray.tfar;
+            its.mesh = m_meshes[rayhit.hit.geomID];
             return true;
+        }
         ray.maxt = its.t = rayhit.ray.tfar;
         its.uv = Point2f(rayhit.hit.u, rayhit.hit.v); // prim_uv
         its.mesh = m_meshes[rayhit.hit.geomID];
@@ -128,13 +132,25 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
         /* Vertex indices of the triangle */
         uint32_t idx0 = F(0, f), idx1 = F(1, f), idx2 = F(2, f);
 
-        Point3f p0 = V.col(idx0), 
-                p1 = V.col(idx1), 
-                p2 = V.col(idx2);
-
-        /* Compute the intersection positon accurately
-           using barycentric coordinates */
-        its.p = bary.x() * p0 + bary.y() * p1 + bary.z() * p2;
+        Point3f p0 = V.col(idx0), p1 = V.col(idx1), p2 = V.col(idx2);
+        Normal3f n0 = N.col(idx0), n1 = N.col(idx1), n2 = N.col(idx2);
+        // /* Compute the intersection positon accurately
+        //    using barycentric coordinates */
+        // its.p = bary.x() * p0 + bary.y() * p1 + bary.z() * p2;
+        
+        // [Hacking the Shadow Terminator. Johannes Hanika. 2021] https://jo.dreggn.org/home/2021_terminator.pdf
+        Point3f orignP = bary.x()*p0 + bary.y()*p1 + bary.z()*p2;
+        // get distance vectors from triangle vertices
+        Vector3f tmpu=orignP-p0, tmpv=orignP-p1, tmpw=orignP-p2;
+        // project these onto the tangent planes, defined by the shading normals
+        float dotu = std::min(0.f, tmpu.dot(n0));
+        float dotv = std::min(0.f, tmpv.dot(n1));
+        float dotw = std::min(0.f, tmpw.dot(n2));
+        tmpu -= dotu*n0;
+        tmpv -= dotv*n1;
+        tmpw -= dotw*n2;
+        // finally P' is the barycentric mean of these three
+        its.p = orignP + bary.x()*tmpu + bary.y()*tmpv + bary.z()*tmpw;
 
         /* Compute the geometry frame */
         Vector3f dp0 = p1 - p0, 
@@ -148,10 +164,6 @@ bool Accel::rayIntersect(const Ray3f &ray_, Intersection &its, bool shadowRay) c
                      bary.z() * UV.col(idx2);
         
         if (likely(N.size() > 0 && UV.size() > 0)) {
-            Normal3f n0 = N.col(idx0), 
-                     n1 = N.col(idx1), 
-                     n2 = N.col(idx2);
-
             Point2f uv0 = UV.col(idx0), 
                     uv1 = UV.col(idx1), 
                     uv2 = UV.col(idx2);
