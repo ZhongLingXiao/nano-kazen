@@ -23,7 +23,6 @@
 4. Configurable ray bias for reduce ray intersection computations error
 5. Light primary visibility : toggle light visibility
 
-<br>
 **Reference**
 
 [1] [Stochastic Sampling in Computer Graphics](http://www.cs.cmu.edu/afs/cs/academic/class/15462-s15/www/lec_slides/p51-cook.pdf) **ROBERT L. COOK**. 1986
@@ -65,7 +64,7 @@
 
 [See the full kazen-2022-q1 report](https://kazen-renderer.github.io/2022/04/kazen-con-v001-report.html)
 
-<br>
+
 **Reference**
 
 [1] [Physically Based Shading at Disney](https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf) **Brent Burley**. 2012
