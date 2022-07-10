@@ -40,8 +40,6 @@
 [7] [Ray Tracing Denoisinge](https://alain.xyz/blog/ray-tracing-denoising#statistical-analysis) **Alain Galvan**. 2020
 
 
-------
-
 ## KISS PBR shading model
 
 ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/final_cover.jpg "Figure 2: 3840x2160 | 10000 spp | 3.4 h")
