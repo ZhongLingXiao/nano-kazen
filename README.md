@@ -6,7 +6,7 @@
 [官方网站入口](https://kazen-renderer.github.io/)
 <br>
 <br>
-------
+
 ## KAZEN CON 2
 
 ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q2/img/kc_v02.png "Figure 1: 1920x1080 | 16384 spp | 1.1 h")
@@ -24,8 +24,7 @@
 5. Light primary visibility : toggle light visibility
 
 <br>
-<br>
-## Reference
+**Reference**
 
 [1] [Stochastic Sampling in Computer Graphics](http://www.cs.cmu.edu/afs/cs/academic/class/15462-s15/www/lec_slides/p51-cook.pdf) **ROBERT L. COOK**. 1986
 
@@ -65,9 +64,9 @@
 8. Light : mesh light, basic environment ( Blinn/Newell Latitude Mapping )
 
 [See the full kazen-2022-q1 report](https://kazen-renderer.github.io/2022/04/kazen-con-v001-report.html)
+
 <br>
-<br>
-## Reference
+**Reference**
 
 [1] [Physically Based Shading at Disney](https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf) **Brent Burley**. 2012
 
