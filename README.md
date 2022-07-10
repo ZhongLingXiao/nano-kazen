@@ -6,12 +6,47 @@
 [官方网站入口](https://kazen-renderer.github.io/)
 <br>
 <br>
+------
+## KAZEN CON 2
+
+![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q2/img/kc_v02.jpg "Figure 1: 1920x1080 | 16384 spp | 1.1 h")
+<div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 1: 1920x1080 | 16384 spp | 1.1 h</center></div><br>
+
+**Core Feature**
+
+1. New samplers
+   1. stratified
+   2. correlated
+   3. pmj02-bn
+2. Geometric shadow terminator : remove the shadow-line artifact cause by geometry
+3. Fire fly reduction: increase roughness per bounce
+4. Configurable ray bias for reduce ray intersection computations error
+5. Light primary visibility : toggle light visibility
+
+<br>
+<br>
+## Reference
+[1] [Stochastic Sampling in Computer Graphics](http://www.cs.cmu.edu/afs/cs/academic/class/15462-s15/www/lec_slides/p51-cook.pdf) **ROBERT L. COOK**. 1986
+
+[2] [Correlated Multi-Jittered Sampling](https://graphics.pixar.com/library/MultiJitteredSampling/paper.pdf) **Andrew Kensler**. 2013
+
+[3] [Progressive Multi-Jittered Sample Sequences](https://graphics.pixar.com/library/ProgressiveMultiJitteredSampling/paper.pdf) **Per Christensen, Andrew Kensler and Charlie Kilpatrick**. 2015
+
+[4] [Physically Based Rendering v4: from theory to implementation](https://www.pbrt.org/) **Matt Pharr, Wenzel Jakob and Greg Humphreys**. 2023
+
+[5] [Hacking the Shadow Terminator](https://jo.dreggn.org/home/2021_terminator.pdf) **Johannes Hanika**. 2021
+
+[6] [Accumulate a roughness bias based on roughness of hitting surface](https://twitter.com/YuriyODonnell/status/1199253959086612480) **Yuriy O'Donnell**. 2019
+
+[7] [Ray Tracing Denoisinge](https://alain.xyz/blog/ray-tracing-denoising#statistical-analysis) **Alain Galvan**. 2020
 
 
-## 1. KISS PBR shading model
+------
 
-![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/final_cover.jpg "Figure 1: 3840x2160 | 10000 spp | 3.4 h")
-<div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 1: 3840x2160 | 10000 spp | 3.4 h</center></div><br>
+## KISS PBR shading model
+
+![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/final_cover.jpg "Figure 2: 3840x2160 | 10000 spp | 3.4 h")
+<div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 2: 3840x2160 | 10000 spp | 3.4 h</center></div><br>
 
 **Core Feature**
 
