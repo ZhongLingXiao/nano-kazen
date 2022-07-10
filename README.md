@@ -9,7 +9,7 @@
 ------
 ## KAZEN CON 2
 
-![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q2/img/kc_v02.jpg "Figure 1: 1920x1080 | 16384 spp | 1.1 h")
+![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q2/img/kc_v02.png "Figure 1: 1920x1080 | 16384 spp | 1.1 h")
 <div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 1: 1920x1080 | 16384 spp | 1.1 h</center></div><br>
 
 **Core Feature**
@@ -26,13 +26,14 @@
 <br>
 <br>
 ## Reference
+
 [1] [Stochastic Sampling in Computer Graphics](http://www.cs.cmu.edu/afs/cs/academic/class/15462-s15/www/lec_slides/p51-cook.pdf) **ROBERT L. COOK**. 1986
 
 [2] [Correlated Multi-Jittered Sampling](https://graphics.pixar.com/library/MultiJitteredSampling/paper.pdf) **Andrew Kensler**. 2013
 
 [3] [Progressive Multi-Jittered Sample Sequences](https://graphics.pixar.com/library/ProgressiveMultiJitteredSampling/paper.pdf) **Per Christensen, Andrew Kensler and Charlie Kilpatrick**. 2015
 
-[4] [Physically Based Rendering v4: from theory to implementation](https://www.pbrt.org/) **Matt Pharr, Wenzel Jakob and Greg Humphreys**. 2023
+[4] [Physically Based Rendering v4](https://www.pbrt.org/) **Matt Pharr, Wenzel Jakob and Greg Humphreys**. 2023
 
 [5] [Hacking the Shadow Terminator](https://jo.dreggn.org/home/2021_terminator.pdf) **Johannes Hanika**. 2021
 
