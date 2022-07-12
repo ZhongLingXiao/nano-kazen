@@ -1,12 +1,30 @@
-# nano-Kazen
-> 这是kazen的一小步，更是国人自主光线追踪渲染器的一大步。
->
-> Arnold，Renderman直呼：Houston, we get a problem!
+<!-- Allow this file to not have a first line heading -->
+<!-- markdownlint-disable-file MD041 -->
 
-[官方网站入口](https://kazen-renderer.github.io/)
-<br>
-<br>
+<!-- inline html -->
+<!-- markdownlint-disable-file MD033 -->
 
+<div align="center">
+
+# 💡 nano-kazen
+
+**Experimental cpu based path tracer**
+</div>
+
+``` 
+  __  ___      ___      ________   _______ .__   __.   
+ |  |/  /     /   \    |       /  |   ____||  \ |  | 
+ |  '  /     /  ^  \   `---/  /   |  |__   |   \|  | 
+ |    <     /  /_\  \     /  /    |   __|  |  . `  | 
+ |  .  \   /  _____  \   /  /----.|  |____ |  |\   | 
+ |__|\__\ /__/     \__\ /________||_______||__| \__| 
+====================================================================
+ nano-kazen: Physically Based Renderer                              
+ Version Alpha 0.1.1a                                            
+ Copyright (C) 2022 ZhongLingXiao && Joey Chen. All rights reserved.                          
+====================================================================
+```
+---
 ## KAZEN CON 2
 
 ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q2/img/kc_v02.png "Figure 1: 1920x1080 | 16384 spp | 1.1 h")
@@ -15,9 +33,9 @@
 **Core Feature**
 
 1. New samplers
-   1. stratified
-   2. correlated
-   3. pmj02-bn
+   - stratified
+   - correlated
+   - pmj02-bn
 2. Geometric shadow terminator : remove the shadow-line artifact cause by geometry
 3. Fire fly reduction: increase roughness per bounce
 4. Configurable ray bias for reduce ray intersection computations error
@@ -40,6 +58,8 @@
 [7] [Ray Tracing Denoisinge](https://alain.xyz/blog/ray-tracing-denoising#statistical-analysis) **Alain Galvan**. 2020
 
 
+---
+
 ## KISS PBR shading model
 
 ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/final_cover.jpg "Figure 2: 3840x2160 | 10000 spp | 3.4 h")
@@ -50,10 +70,10 @@
 1. Monte Carlo unbiased path tracing 
 2. multiple importance sample
 3. Material ：kazen initial standard surface ( kiss )
-   1. diffuse ：Disney diffuse with Retro-Reflective
-   2. specular ：GGX-Smith BRDF with VNDF
-   3. clearcoat ：GGX-Smith BRDF with VNDF
-   4. sheen ：Disney sheen
+   - diffuse ：Disney diffuse with Retro-Reflective
+   - specular ：GGX-Smith BRDF with VNDF
+   - clearcoat ：GGX-Smith BRDF with VNDF
+   - sheen ：Disney sheen
 4. Textures and simple textures ops ( nested blend, ramp color, scale uv )
 5. OIIO texture system
 6. Normal mapping
