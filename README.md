@@ -47,15 +47,17 @@
 
 [2] [Correlated Multi-Jittered Sampling](https://graphics.pixar.com/library/MultiJitteredSampling/paper.pdf) **Andrew Kensler**. 2013
 
-[3] [Progressive Multi-Jittered Sample Sequences](https://graphics.pixar.com/library/ProgressiveMultiJitteredSampling/paper.pdf) **Per Christensen, Andrew Kensler and Charlie Kilpatrick**. 2015
+[3] [Andrew Kensler's permute()](https://andrew-helmer.github.io/permute/) **Andrew Helmer**. 2021
 
-[4] [Physically Based Rendering v4](https://www.pbrt.org/) **Matt Pharr, Wenzel Jakob and Greg Humphreys**. 2023
+[4] [Progressive Multi-Jittered Sample Sequences](https://graphics.pixar.com/library/ProgressiveMultiJitteredSampling/paper.pdf) **Per Christensen, Andrew Kensler and Charlie Kilpatrick**. 2015
 
-[5] [Hacking the Shadow Terminator](https://jo.dreggn.org/home/2021_terminator.pdf) **Johannes Hanika**. 2021
+[5] [Physically Based Rendering v4: from theory to implementation](https://www.pbrt.org/) **Matt Pharr, Wenzel Jakob and Greg Humphreys**. 2023
 
-[6] [Accumulate a roughness bias based on roughness of hitting surface](https://twitter.com/YuriyODonnell/status/1199253959086612480) **Yuriy O'Donnell**. 2019
+[6] [Hacking the Shadow Terminator](https://jo.dreggn.org/home/2021_terminator.pdf) **Johannes Hanika**. 2021
 
-[7] [Ray Tracing Denoisinge](https://alain.xyz/blog/ray-tracing-denoising#statistical-analysis) **Alain Galvan**. 2020
+[7] [Accumulate a roughness bias based on roughness of hitting surface](https://twitter.com/YuriyODonnell/status/1199253959086612480) **Yuriy O'Donnell**. 2019
+
+[8] [Ray Tracing Denoisinge](https://alain.xyz/blog/ray-tracing-denoising#statistical-analysis) **Alain Galvan**. 2020
 
 
 ---
