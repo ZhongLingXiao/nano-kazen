@@ -21,8 +21,10 @@
 #include <kazen/define.h>
 
 
-/* "Ray epsilon": relative error threshold for ray intersection computations */
-#define Epsilon 1e-5f // std::numeric_limits<Float>::epsilon()
+/* [deprecated] "Ray epsilon": relative error threshold for ray intersection computations.
+ * Use integrator trace bias instead for better control over this data.
+ */
+#define Epsilon 1e-5f
 #define OneMinusEpsilon float(0x1.fffffep-1)
 
 /* A few useful constants */
@@ -390,7 +392,7 @@ extern Point2f sphericalCoordinates(const Vector3f &dir);
  *      Refractive index of the interior
  */
 extern float fresnel(float cosThetaI, float extIOR, float intIOR);
-
+extern float fresnel(float cosThetaI, float eta);
 /**
  * \brief Calculates the unpolarized Fresnel reflection coefficient
  * at a planar interface between two dielectrics

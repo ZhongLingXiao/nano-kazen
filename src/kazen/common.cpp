@@ -475,6 +475,21 @@ float fresnel(float cosThetaI, float extIOR, float intIOR) {
     return (Rs * Rs + Rp * Rp) / 2.0f;
 }
 
+float fresnel(float cosThetaI, float eta) {
+    float sinThetaTSqr = eta * eta * (1.0f - cosThetaI * cosThetaI);
+
+    // Total internal reflection
+    if (sinThetaTSqr > 1.f)
+        return 1.f;
+
+    float cosThetaT = std::sqrt(std::max(1.f - sinThetaTSqr, 0.f));
+
+    float rs = (eta * cosThetaT - cosThetaI) / (eta * cosThetaT + cosThetaI);
+    float rp = (eta * cosThetaI - cosThetaT) / (eta * cosThetaI + cosThetaT);
+
+    return 0.5f * (rs * rs + rp * rp);
+} 
+
 float fresnelDielectric(float cosThetaI_, float eta, float &cosThetaT_) {
     /* Using Snell's law, calculate the squared sine of the
        angle between the normal and the transmitted ray */

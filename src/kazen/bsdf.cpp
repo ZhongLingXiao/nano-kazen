@@ -3,6 +3,7 @@
 #include <kazen/frame.h>
 #include <kazen/warp.h>
 #include <kazen/texture.h>
+#include <kazen/ggx_brdf.h>
 #include <kazen/mircofacet.h>
 #include <kazen/proplist.h>
 #include <Eigen/Geometry> // cross()
@@ -112,7 +113,7 @@ public:
 
     float pdf(const BSDFQueryRecord &) const {
         /* Discrete BRDFs always evaluate to zero in kazen */
-        return 1.0f;
+        return 0.0f;
     }
 
     Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const {
@@ -168,7 +169,7 @@ public:
 
     float pdf(const BSDFQueryRecord &) const {
         /* Discrete BRDFs always evaluate to zero in kazen */
-        return 1.0f;
+        return 0.0f;
     }
 
     Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const {
@@ -407,6 +408,8 @@ public:
     std::string toString() const {
         return fmt::format("NormalMap[]");
     }    
+
+    float regularize(const Point2f &uv) const { return m_nested->regularize(uv); }
 
 private:
     Texture<Color3f>* m_normalMap=nullptr;
@@ -997,9 +1000,9 @@ public:
             return Color3f(fr);
         } else {            
             /* Calculate the total amount of transmission */
-            float sqrtDenom = bRec.wi.dot(wm) + eta * bRec.wo.dot(wm);
+            float denom = bRec.wi.dot(wm) + eta * bRec.wo.dot(wm);
             float value = ((1 - F) * D * G * eta * eta * bRec.wi.dot(wm) * bRec.wo.dot(wm)) /
-                (cosThetaI * sqrtDenom * sqrtDenom);
+                (cosThetaI * sqr(denom));
 
             return std::abs(value);
         }
@@ -1142,7 +1145,6 @@ private:
 };
 
 
-
 /// kazen innercircle standard surface (kiss)
 /* References:
 * [1] [Physically Based Shading at Disney] https://media.disneyanimation.com/uploads/production/publication_asset/48/asset/s2012_pbs_disney_brdf_notes_v3.pdf
@@ -1184,6 +1186,32 @@ public:
         return 2.f/(1.f - std::sqrt(0.08*specular)) - 1.f;
     };
 
+    // [Taming the Shadow Terminator. Chiang.2019] https://www.yiningkarlli.com/projects/shadowterminator/shadow_terminator_v1_1.pdf
+    float shadowTerminator(const Vector3f &L,const Vector3f &shNormal, const Vector3f &geoNormal) const {
+        float NDotL = std::max(0.0f, shNormal.dot(L));
+        float NGeomDotL = std::max(0.0f, geoNormal.dot(L));
+        float NGeomDotN = std::max(0.0f, geoNormal.dot(shNormal));
+        if (NDotL == 0.0f || NGeomDotL == 0.0f || NGeomDotN == 0.0f) {
+            return 0.0f;
+        } else {
+            float G = NGeomDotL / (NDotL * NGeomDotN);
+            if (G <= 1.0f) {
+                float smoothTerm = -(G * G * G) + (G * G) + G; // smoothTerm is G' in the math
+                return smoothTerm;
+            }
+        }
+        return 1.0f;
+    }
+
+    // [Predictable and Targeted Softening of the Shadow Terminator] https://dl.acm.org/doi/pdf/10.1145/3388767.3407371
+    float shadowTerminator1(const Vector3f &Ng, const Vector3f &Ns, const Vector3f &wi) const {
+        const float alpha = 0.05f;
+        float d = math::lerp(Ns.dot(Ng), sin(alpha+0.1), sin(alpha));
+        float t = std::max(0.0f, std::min(1.0f, Ng.dot(wi)/d));
+        float G = t*t*(3.f - 2.f*t);
+        return G;    
+    }
+
     Color3f eval(const BSDFQueryRecord &bRec) const {
         /* This is a smooth BRDF -- return zero if the measure
            is wrong, or when queried for illumination on the backside */
@@ -1197,7 +1225,10 @@ public:
         // color 
         Color3f Cdlin = m_baseColor->eval(bRec.uv);
         auto metallic = m_metallic->eval(bRec.uv).r(); // TODO: single channel?
-        auto roughness = m_roughness->eval(bRec.uv).r();
+        // auto roughness = m_roughness->eval(bRec.uv).r();
+        // if (bRec.its.regularizeFlag)
+        //     roughness = std::min(1.f, roughness+bRec.its.accumulatedRoughness);
+        auto roughness = std::min(1.f, m_roughness->eval(bRec.uv).r()+bRec.its.accumulatedRoughness);
         float Cdlum = Cdlin.getLuminance();
         Color3f Ctint = Cdlum > 0.f ? Cdlin/Cdlum : Color3f(1.f);
 		Color3f Ctintmix = 0.08f * m_specular * lerp(Color3f(1.f), Ctint, m_specularTint);
@@ -1227,8 +1258,11 @@ public:
         float clearcoatRoughness = math::lerp(m_clearcoatRoughness, .01f, .3f);
         Color3f clearcoatTerm = 0.25f * m_clearcoat * evaluateGGXSmithBRDF(V, L, 0.04f, clearcoatRoughness, m_anisotropy, F);       
 
+        // auto st = shadowTerminator(L, bRec.its.shFrame.n, bRec.its.geoFrame.n);
+        // auto st = shadowTerminator1(bRec.its.geoFrame.n, bRec.its.shFrame.n, L);
+
         return ((1.f-metallic)*(Cdlin * INV_PI * (Lambert + retro_reflection) +  Fsheen) +
-                (specTerm + clearcoatTerm))* Frame::cosTheta(bRec.wo);
+                (specTerm + clearcoatTerm)) * Frame::cosTheta(bRec.wo);
 
     }
 
@@ -1248,7 +1282,11 @@ public:
         auto jacobian = 4.0f * bRec.wi.dot(H);
         
         // specular 
-        auto roughness = m_roughness->eval(bRec.uv).r();
+        // auto roughness = m_roughness->eval(bRec.uv).r();
+        // if (bRec.its.regularizeFlag)
+        //     roughness = std::min(1.f, roughness+bRec.its.accumulatedRoughness);
+        auto roughness = std::min(1.f, m_roughness->eval(bRec.uv).r()+bRec.its.accumulatedRoughness);
+
         auto alpha = roughnessToAlpha(roughness, m_anisotropy);
         auto specPdf = computeGGXSmithPDF(bRec.wi, H, alpha) / jacobian;
 
@@ -1283,6 +1321,9 @@ public:
             bool flip = bRec.wi.z() <= 0.f;
             if (sample < GTR2) {
                 auto roughness = m_roughness->eval(bRec.uv).r();
+                // if (bRec.its.regularizeFlag)
+                //     roughness = std::min(1.f, roughness+bRec.its.accumulatedRoughness);
+                // auto roughness = std::min(1.f, m_roughness->eval(bRec.uv).r()+bRec.its.accumulatedRoughness);
                 Vector2f alpha = roughnessToAlpha(roughness, m_anisotropy);
                 H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample2);
             } else {
@@ -1293,6 +1334,30 @@ public:
             // Reflect the view direction across the microfacet normal to get the sample direction.
             bRec.wo = reflect(bRec.wi, H).normalized();
 		}
+		// if (sample2.x() < diffuse) {
+        //     auto sample = Point2f(sample2.x()/diffuse, sample2.y());
+        //     bRec.wo = Warp::squareToCosineHemisphere(sample);
+		// } else {
+		// 	auto sample = Point2f((sample2.x()-diffuse) / (1.f-diffuse), sample2.y());
+        //     float GTR2 = 1.f / (1.f + m_clearcoat);
+            
+        //     Vector3f H;
+        //     Point2f sample1_;
+        //     bool flip = bRec.wi.z() <= 0.f;
+        //     if (sample1_.x() < GTR2) {
+        //         sample1_ = Point2f(sample.x() / GTR2, sample.y());
+        //         auto roughness = m_roughness->eval(bRec.uv).r();
+        //         Vector2f alpha = roughnessToAlpha(roughness, m_anisotropy);
+        //         H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample1_);
+        //     } else {
+        //         sample1_ = Point2f((sample.x()-GTR2) / (1.f-GTR2), sample.y());
+        //         Vector2f alpha = roughnessToAlpha(math::lerp(m_clearcoatRoughness, 0.01f, .3f), 0.f);
+        //         H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample1_);
+        //     }
+        //     H = flip ? -H : H;
+        //     // Reflect the view direction across the microfacet normal to get the sample direction.
+        //     bRec.wo = reflect(bRec.wi, H).normalized();
+		// }
 
         auto invalid = [&]() {
             return std::isnan(bRec.wo.x()) || std::isnan(bRec.wo.y()) || std::isnan(bRec.wo.z());
@@ -1329,6 +1394,10 @@ public:
         }
     }
 
+    float regularize(const Point2f &uv) const {
+        return m_roughness->eval(uv).r();
+    }
+
     std::string toString() const {
         return fmt::format(
             "KazenStandardSurface"
@@ -1349,6 +1418,468 @@ private:
 };
 
 
+// /// kazen principled bsdf
+// class KazenPrincipledBSDF : public BSDF {
+// public:
+//     KazenPrincipledBSDF(const PropertyList &proplist) {
+//         m_anisotropy = proplist.getFloat("anisotropy", 0.0f);
+//         m_specular = proplist.getFloat("specular", 0.5f);
+//         m_specularTint = proplist.getFloat("specularTint", 0.5f); 
+//         m_clearcoat = proplist.getFloat("clearcoat", 0.0f);
+//         m_clearcoatRoughness = proplist.getFloat("clearcoatRoughness", 0.5f);               
+//         m_sheen = proplist.getFloat("sheen", 0.0f);
+//         m_sheenTint = proplist.getFloat("sheenTint", 0.5);
+//         m_transmission = proplist.getFloat("transmission", 0.0);
+//     }
+
+//     ~KazenPrincipledBSDF() {
+//         if(!m_baseColor) delete m_baseColor;
+//         if(!m_metallic) delete m_metallic;
+//         if(!m_roughness) delete m_roughness;
+//     }
+
+//     // Color3f eval(const BSDFQueryRecord &bRec) const {
+//     //     /* This is a smooth BRDF -- return zero if the measure
+//     //        is wrong, or when queried for illumination on the backside */
+//     //     if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
+//     //         return Color3f(0.0f);
+
+//     //     Vector3f V = bRec.wi;
+//     //     Vector3f L = bRec.wo;
+//     //     Vector3f H = (V + L).normalized();
+
+//     //     // color 
+//     //     Color3f Cdlin = m_baseColor->eval(bRec.uv);
+//     //     auto metallic = m_metallic->eval(bRec.uv).r(); // TODO: single channel?
+//     //     auto roughness = m_roughness->eval(bRec.uv).r();
+//     //     float Cdlum = Cdlin.getLuminance();
+//     //     Color3f Ctint = Cdlum > 0.f ? Cdlin/Cdlum : Color3f(1.f);
+// 	// 	Color3f Ctintmix = 0.08f * m_specular * lerp(Color3f(1.f), Ctint, m_specularTint);
+// 	// 	Color3f Cspec0 = lerp(Ctintmix, Cdlin, metallic);
+
+//     //     // diffuse
+//     //     float FL = schlickWeight(L.z());
+//     //     float FV = schlickWeight(V.z());
+//     //     float FH = schlickWeight(L.dot(H));
+
+//     //     float cosThetaD = V.dot(H);
+//     //     float FD90 = 0.5f * 2 * roughness * cosThetaD * cosThetaD;
+
+//     //     float Lambert = (1.f - 0.5f*FL) * (1.f - 0.5f*FV);
+//     //     float RR = 2.f * roughness * cosThetaD * cosThetaD;
+//     //     float retro_reflection = RR * (FL + FV + FL * FV * (RR - 1.f));
+
+//     //     // sheen
+//     //     Color3f Csheen = lerp(Color3f(1.f), Ctint, m_sheenTint);
+//     //     Color3f Fsheen = FH * m_sheen * Csheen;
+
+//     //     // specular reflection
+//     //     Color3f F;
+//     //     Color3f specTerm = evaluateGGXSmithBRDF(V, L, Cspec0, roughness, m_anisotropy, F);         
+
+//     //     // specular refraction
+
+
+//     //     // clearcoat(ior = 1.5 -> F0 = 0.04)
+//     //     float clearcoatRoughness = math::lerp(m_clearcoatRoughness, .01f, .3f);
+//     //     Color3f clearcoatTerm = 0.25f * m_clearcoat * evaluateGGXSmithBRDF(V, L, 0.04f, clearcoatRoughness, m_anisotropy, F);       
+
+//     //     return ((1.f-metallic)*(Cdlin * INV_PI * (Lambert + retro_reflection) +  Fsheen) +
+//     //             (specTerm + clearcoatTerm)) * Frame::cosTheta(bRec.wo);
+
+//     // }
+
+//     // float pdf(const BSDFQueryRecord &bRec) const override {
+//     //     /* This is a smooth BRDF -- return zero if the measure
+//     //        is wrong, or when queried for illumination on the backside */
+//     //     if (Frame::cosTheta(bRec.wi) <= 0 || Frame::cosTheta(bRec.wo) <= 0)
+//     //         return 0.0f;
+
+//     //     // weight: reference - http://simon-kallweit.me/rendercompo2015/report/
+//     //     auto metallic = m_metallic->eval(bRec.uv).r();
+//     //     float diffuse = (1.f - metallic) * 0.5f;
+//     //     // float diffuse =  m_baseColor->eval(bRec.uv).maxCoeff();
+//     //     float GTR2 = 1.f / (1.f + m_clearcoat);
+
+//     //     auto H = (bRec.wi + bRec.wo).normalized();
+//     //     auto jacobian = 4.0f * bRec.wi.dot(H);
+        
+//     //     // specular 
+//     //     auto roughness = m_roughness->eval(bRec.uv).r();
+//     //     auto alpha = roughnessToAlpha(roughness, m_anisotropy);
+//     //     auto specPdf = computeGGXSmithPDF(bRec.wi, H, alpha) / jacobian;
+
+//     //     // clearcoat
+//     //     auto coatalpha = roughnessToAlpha(math::lerp(m_clearcoatRoughness, .01f, .3f), 0.f);
+//     //     float clearcoatPdf = computeGGXSmithPDF(bRec.wi, H, coatalpha) / jacobian;
+
+//     //     return diffuse * INV_PI * Frame::cosTheta(bRec.wo) +
+//     //             (1.f-diffuse) * (GTR2*specPdf + (1.f-GTR2)*clearcoatPdf);  
+//     // }
+
+//     // Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const override {
+//     //     if (Frame::cosTheta(bRec.wi) <= 0)
+//     //         return Color3f(0.0f);
+
+//     //     bRec.measure = ESolidAngle;
+//     //     /* Relative index of refraction: no change */
+//     //     bRec.eta = 1.0f;
+
+//     //     auto metallic = m_metallic->eval(bRec.uv).r();
+//     //     float diffuse = (1.f - metallic) * 0.5f;
+//     //     // float diffuse = m_baseColor->eval(bRec.uv).maxCoeff();
+
+// 	// 	if (sample1 < diffuse) {
+//     //         bRec.wo = Warp::squareToCosineHemisphere(sample2);
+// 	// 	} else {
+// 	// 		// auto sample = Point2f((_sample.x()-diffuse) / (1.f-diffuse), _sample.y());
+//     //         auto sample = (sample1-diffuse) / (1.f-diffuse);
+//     //         float GTR2 = 1.f / (1.f + m_clearcoat);
+            
+//     //         Vector3f H;
+//     //         bool flip = bRec.wi.z() <= 0.f;
+//     //         if (sample < GTR2) {
+//     //             auto roughness = m_roughness->eval(bRec.uv).r();
+//     //             Vector2f alpha = roughnessToAlpha(roughness, m_anisotropy);
+//     //             H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample2);
+//     //         } else {
+//     //             Vector2f alpha = roughnessToAlpha(math::lerp(m_clearcoatRoughness, 0.01f, .3f), 0.f);
+//     //             H = sampleGGXSmithVNDF(flip ? -bRec.wi : bRec.wi, alpha, sample2);
+//     //         }
+//     //         H = flip ? -H : H;
+//     //         // Reflect the view direction across the microfacet normal to get the sample direction.
+//     //         bRec.wo = reflect(bRec.wi, H).normalized();
+// 	// 	}
+
+//     //     auto invalid = [&]() {
+//     //         return std::isnan(bRec.wo.x()) || std::isnan(bRec.wo.y()) || std::isnan(bRec.wo.z());
+//     //     };
+
+//     //     if (Frame::cosTheta(bRec.wo) <= 0 || pdf(bRec) <= Epsilon || invalid())
+//     //         return Color3f(0.f);
+
+// 	// 	// return eval(bRec) / pdf(bRec) * Frame::cosTheta(bRec.wo);
+//     //     return eval(bRec) / pdf(bRec);
+//     // }
+
+
+
+//     Color3f eval(const BSDFQueryRecord &bRec) const {
+//         // if (Frame::cosTheta(bRec.wi) <= 0.f || Frame::cosTheta(bRec.wo) <= 0.f)
+//         //     return Color3f(0.f);
+//         Vector3f V = bRec.wi;
+//         Vector3f L = bRec.wo;
+//         Vector3f H = (V + L).normalized();
+
+//         // material parameters
+//         auto metallic = m_metallic->eval(bRec.uv).r(); // TODO: single channel?
+//         auto roughness = m_roughness->eval(bRec.uv).r();
+        
+//         // color 
+//         Color3f Cdlin = m_baseColor->eval(bRec.uv);
+//         float Cdlum = Cdlin.getLuminance();
+//         Color3f Ctint = Cdlum > 0.f ? Cdlin/Cdlum : Color3f(1.f);
+// 		// Color3f Ctintmix = 0.08f * m_specular * lerp(Color3f(1.f), Ctint, m_specularTint);
+// 		// Color3f Cspec0 = lerp(Ctintmix, Cdlin, metallic);  
+    
+//         // diffuse
+//         float diffuseWt = (1.f - metallic) * (1.f - m_transmission);
+//         Color3f diffuse = diffuseWt > 0.f ? 
+//             diffuseWt * evalDiffuse(V, L, H, Cdlin, Ctint, roughness) : Color3f(0.f);
+
+
+//         // specular transmission
+//         float transmissionWt = (1.f - metallic) * m_transmission;
+//         Color3f transmission = transmissionWt > 0.f ? 
+//             transmissionWt * evalTransmission(V, L, H, Cdlin, Ctint, roughness, metallic) : Color3f(0.f);
+
+//         // specular reflection
+//         Color3f reflection = evalReflection(V, L, H, Cdlin, Ctint, roughness, metallic);
+
+//         // clearcoat
+//         Color clearcoat = evalClearcoat();
+
+//         return (diffuse + reflection + transmission + clearcoat) * Frame::cosTheta(bRec.wo);
+//     }
+
+
+//     float pdf(const BSDFQueryRecord &bRec) const {
+//         Vector3f V = bRec.wi;
+//         Vector3f L = bRec.wo;
+//         Vector3f H = (V + L).normalized();
+
+//         float lum = m_baseColor->eval(bRec.uv).getLuminance();
+//         auto metallic = m_metallic->eval(bRec.uv).r();
+//         auto roughness = m_roughness->eval(bRec.uv).r();
+        
+//         float diffuseWt = (1.f - metallic) * (1.f - m_transmission) * 0.5f;
+//         float transmissionWt = (1.f - metallic) * m_transmission * 0.5f;
+//         float reflectionWt = (1.f - diffuseWt - transmissionWt) / (1.f + m_clearcoat);
+//         float clearcoatWt = 1.f - diffuseWt - transmissionWt - reflectionWt;
+
+//         auto diffusePdf = diffuseWt * pdfDiffuse(V, L);
+//         auto reflectionPdf = reflectionWt * pdfReflection(V, L, H, roughness);
+//         auto transmissionPdf = transmissionWt * pdfTransmission(V, L, H, roughness, metallic);
+//         auto clearcoatPdf = clearcoatWt * pdfClearcoat(V, L, H, roughness);
+        
+//         return diffusePdf + reflectionPdf + transmissionPdf + clearcoatPdf;
+//     }
+
+
+//     Color3f sample(BSDFQueryRecord &bRec, float sample1, const Point2f &sample2) const override {
+//         if (Frame::cosTheta(bRec.wi) <= 0.f)
+//             return Color3f(0.f);
+
+//         bRec.measure = ESolidAngle;
+        
+//         /* Relative index of refraction: no change */
+//         bRec.eta = 1.0f;
+
+//         auto metallic = m_metallic->eval(bRec.uv).r();
+//         auto roughness = m_roughness->eval(bRec.uv).r();
+
+//         float diffuseWt = (1.f - metallic) * (1.f - m_transmission) * 0.5f;
+//         float transmissionWt = (1.f - metallic) * m_transmission * 0.5f;
+//         float reflectionWt = (1.f - diffuseWt - transmissionWt) / (1.f + m_clearcoat);
+//         float clearcoatWt = 1.f - diffuseWt - transmissionWt - reflectionWt;
+
+// 		if (sample1 < diffuseWt) {
+//             bRec.wo = Warp::squareToCosineHemisphere(sample2);
+//         }
+//         else if (sample1 < diffuseWt + clearcoatWt) {
+//             bRec.wo = Warp::squareToCosineHemisphere(sample2);
+//         }
+//         else {
+//             // bRec.wo = sampleClearcoat(V, L, H, roughness, sample2);
+//         } 
+
+
+// 		if (sample1 < diffuseWt) {
+//             bRec.wo = Warp::squareToCosineHemisphere(sample2);
+// 		} else {
+//             auto alpha = MicrofacetDistribution::roughnessToAlpha(roughness, m_anisotropy);
+//             MicrofacetDistribution distr(alpha[0], alpha[1]);
+
+//             // bool flip = bRec.wi.z() <= 0.f;
+//             auto H = distr.sample(bRec.wi, sample2);
+//             if (H.z() <= 0.f)
+//                 H = -H;
+//             // H = flip ? -H : H;
+
+//             bRec.wo = reflect(bRec.wi, H).normalized();
+//         }
+
+//         auto invalid = [&]() { return std::isnan(bRec.wo.x()) || std::isnan(bRec.wo.y()) || std::isnan(bRec.wo.z()); };
+//         if (pdf(bRec) <= Epsilon || invalid())
+//             return Color3f(0.f);
+
+//         return eval(bRec) / pdf(bRec);
+//     }
+
+
+//     void addChild(Object *obj) override {
+//         switch (obj->getClassType()) {
+//             case ETexture:
+//                 if( obj->getId() == "baseColor" ) {
+//                     if (m_baseColor)
+//                         throw Exception("There is already an baseColor defined!");
+//                     m_baseColor = static_cast<Texture<Color3f> *>(obj);
+//                 }
+//                 else if ( obj->getId() == "metallic" ) {
+//                     if (m_metallic)
+//                         throw Exception("There is already an metallic defined!");
+//                     m_metallic = static_cast<Texture<Color3f> *>(obj);
+//                 }  
+//                 else if ( obj->getId() == "roughness" ) {
+//                     if (m_roughness)
+//                         throw Exception("There is already an roughness defined!");
+//                     m_roughness = static_cast<Texture<Color3f> *>(obj);
+//                 }       
+//                 break;
+//             default:
+//                 throw Exception("addChild is not supported other than baseColor maps");
+//         }
+//     }
+
+//     std::string toString() const {
+//         return fmt::format(
+//             "KazenPrincipledBSDF"
+//         );
+//     }
+
+// private:
+//     float schlickWeight(float x) const {
+//         x = math::clamp(1.f - x, 0.f, 1.f);
+//         auto x2 = x * x;
+//         return x2 * x2 * x;
+//     }
+
+//     Color3f lerp(const Color3f& c1, const Color3f& c2, float t) const {
+//         return (1.f - t) * c1 + t * c2;
+//     }
+
+//     float ior(float specular) const {
+//         return 2.f/(1.f - std::sqrt(0.08*specular)) - 1.f;
+//     };
+
+//     float schlickR0FromEta(float eta) const { return sqr(eta - 1) / sqr(eta + 1); }
+
+//     Color3f frSchlick(Color3f R0, float cosTheta) const {
+//         return lerp(R0, Color3f(1.f), schlickWeight(cosTheta));
+//     }
+
+//     float frDielectric(float cosThetaI, float eta) const {
+//         cosThetaI = math::clamp(cosThetaI, -1.f, 1.f);
+//         // Potentially flip interface orientation for Fresnel equations
+//         if (cosThetaI < 0) {
+//             eta = 1 / eta;
+//             cosThetaI = -cosThetaI;
+//         }
+
+//         // Compute cosThetaT for Fresnel equations using Snell's law
+//         float sin2ThetaI = 1 - sqr(cosThetaI);
+//         float sin2ThetaT = sin2ThetaI / sqr(eta);
+//         if (sin2ThetaT >= 1)
+//             return 1.f;
+//         float cosThetaT = std::sqrt(1 - sin2ThetaT);
+
+//         float Rs = (eta * cosThetaI - cosThetaT) / (eta * cosThetaI + cosThetaT);
+//         float Rp = (cosThetaI - eta * cosThetaT) / (cosThetaI + eta * cosThetaT);
+        
+//         return 0.5f * (sqr(Rs) + sqr(Rp));
+//         // return 0.f;
+//     }
+
+
+//     Color3f disneyFresnel(Vector3f V, Vector3f H, Color3f Cspec, float eta, float metallic) const {
+//         float cosThetaV = V.dot(H);
+
+//         Color3f metallicFresnel = frSchlick(Cspec, cosThetaV);
+//         Color3f dielectricFresnel = Color3f(frDielectric(cosThetaV, eta));
+//         return lerp(dielectricFresnel, metallicFresnel, metallic);
+//         // return 0.f;
+//     }
+
+//     Color3f evalDiffuse(Vector3f V, Vector3f L, Vector3f H, Color3f Cdlin, Color3f Ctint, float roughness) const {
+//         if (Frame::cosTheta(V) <= 0.f || Frame::cosTheta(L) <= 0.f)
+//             return Color3f(0.f);
+        
+//         float FL = schlickWeight(L.z());
+//         float FV = schlickWeight(V.z());
+//         float FH = schlickWeight(L.dot(H));
+
+//         // diffuse
+//         float diffuse = (1.f - 0.5f*FL) * (1.f - 0.5f*FV);
+        
+//         // retro-reflection
+//         float cosThetaD = V.dot(H);
+//         float RR = 2.f * roughness * cosThetaD * cosThetaD;
+//         float retro_reflection = RR * (FL + FV + FL * FV * (RR - 1.f));
+
+//         // sheen
+//         Color3f Csheen = lerp(Color3f(1.f), Ctint, m_sheenTint);
+//         Color3f Fsheen = FH * m_sheen * Csheen;
+
+//         return Cdlin * INV_PI * (diffuse + retro_reflection) + Fsheen; 
+//     }
+
+//     Color3f evalReflection(Vector3f V, Vector3f L, Vector3f H, Color3f Cdlin, Color3f Ctint, float roughness, float metallic) const {
+//         if (Frame::cosTheta(V) <= 0.f || Frame::cosTheta(L) <= 0.f)
+//             return Color3f(0.f);
+
+//         auto eta = ior(m_specular);
+//         auto R0 = schlickR0FromEta(eta);
+
+//         Color3f Cspec0 = lerp(R0*lerp(Color3f(1.f), Ctint, m_specularTint), Cdlin, metallic);
+//         Color3f F = disneyFresnel(V, H, Cspec0, eta, metallic);
+
+//         auto alpha = MicrofacetDistribution::roughnessToAlpha(roughness, m_anisotropy);
+//         MicrofacetDistribution distr(alpha[0], alpha[1]);
+
+//         // Compute the D (NDF) and G (visibility) terms, along with the microfacet BRDF
+//         // denominator.
+//         float D = distr.D(H);
+//         float G = distr.G2(V, L);
+//         float denom = 4.0f * abs(V.z()) * abs(L.z());
+
+//         // Return the combined microfacet expression.
+//         return F * D * G / denom;
+//         // return Color3f(1.f);
+//     }
+
+//     Color3f evalTransmission(Vector3f V, Vector3f L, Vector3f H, float eta_ ) const {
+//         // if (Frame::cosTheta(L) > 0.f)
+//         //     return Color3f(0.f);
+
+//         // float eta =  Frame::cosTheta(V) > 0.f ? eta_ : 1.f/eta_;
+
+//         // float F = frDielectric(V.dot(H), eta);
+        
+//         // auto alpha = MicrofacetDistribution::roughnessToAlpha(roughness, m_anisotropy)
+//         // MicrofacetDistribution distr(alpha[0], alpha[1]);
+
+//         // // Compute the D (NDF) and G (visibility) terms, along with the microfacet BRDF
+//         // // denominator.
+//         // float D =  distr.D(H);
+//         // float G = distr.G2(V, L);
+//         // // float denom = 4.0f * abs(V.z()) * abs(L.z());
+
+//         // float sqrtDenom = bRec.wi.dot(wm) + eta * bRec.wo.dot(wm);
+//         //     float value = ((1 - F) * D * G * eta * eta * bRec.wi.dot(wm) * bRec.wo.dot(wm)) /
+//         //         (cosThetaI * sqr(denom));
+
+//         //     return std::abs(value);
+//         return Color3f(0.f);
+//     }
+
+//     Color3f evalClearcoat() const {
+//         return Color3f(0.f);
+//     }
+
+//     float pdfDiffuse(Vector3f V, Vector3f L) const {
+//         if (Frame::cosTheta(V) <= 0.f || Frame::cosTheta(L) <= 0.f)
+//             return 0.f;
+
+//         return INV_PI * Frame::cosTheta(L);
+//     }
+
+//     float pdfReflection(Vector3f V, Vector3f L, Vector3f H, float roughness) const {
+//         if (Frame::cosTheta(V) <= 0.f || Frame::cosTheta(L) <= 0.f)
+//             return 0.f;
+
+//         auto jacobian = 4.0f * V.dot(H);
+
+//         auto alpha = MicrofacetDistribution::roughnessToAlpha(roughness, m_anisotropy);
+//         MicrofacetDistribution distr(alpha[0], alpha[1]);
+
+//         return distr.pdf(V, H) / jacobian;
+//     }
+
+//     float pdfTransmission(ector3f V, Vector3f L, Vector3f H, float roughness, float metallic) const {
+//         return 0.f;
+//     }
+
+//     float pdfClearcoat(Vector3f V, Vector3f L, Vector3f H, float roughness) const {
+//         return 0.f;
+//     }
+
+
+// private:
+//     Texture<Color3f>* m_baseColor=nullptr;
+//     Texture<Color3f>* m_roughness=nullptr;
+//     Texture<Color3f>* m_metallic=nullptr;
+//     float m_anisotropy;
+//     float m_specular;
+//     float m_specularTint;
+//     float m_sheen;
+//     float m_sheenTint;
+//     float m_clearcoat;
+//     float m_clearcoatRoughness;
+//     float m_transmission;
+// };
+
+
+
 KAZEN_REGISTER_CLASS(Diffuse, "diffuse");
 KAZEN_REGISTER_CLASS(Dielectric, "dielectric");
 KAZEN_REGISTER_CLASS(Mirror, "mirror");
@@ -1360,4 +1891,5 @@ KAZEN_REGISTER_CLASS(RoughConductor, "roughconductor");
 KAZEN_REGISTER_CLASS(RoughPlastic, "roughplastic");
 KAZEN_REGISTER_CLASS(RoughDielectric, "roughdielectric");
 KAZEN_REGISTER_CLASS(KazenStandardSurface, "kazenstandard");
+// KAZEN_REGISTER_CLASS(KazenPrincipledBSDF, "principled");
 NAMESPACE_END(kazen)

@@ -54,6 +54,8 @@ public:
   
     virtual Color3f sample(LightQueryRecord &lRec, Sampler *sampler, const Mesh *mesh) const = 0;
 
+    virtual bool getPrimaryVisibility() const { return false; }
+
     /**
      * \brief Return the type of object (i.e. Mesh/Light/etc.) 
      * provided by this instance

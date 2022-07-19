@@ -100,6 +100,11 @@ public:
         return m_accel->rayIntersect(ray, its, true);
     }
 
+    bool rayOccluded(const Ray3f &ray, Intersection &its) const {
+        return m_accel->rayIntersect(ray, its, true);
+    }
+
+
     /// \brief Return an axis-aligned box that bounds the scene
     const BoundingBox3f &getBoundingBox() const {
         return m_accel->getBoundingBox();

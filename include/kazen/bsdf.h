@@ -120,6 +120,10 @@ public:
      */
     virtual bool isDiffuse() const { return false; }
 
+
+    // https://twitter.com/YuriyODonnell/status/1199253959086612480
+    virtual float regularize(const Point2f &uv) const { return 0.f; }
+
 };
 
 NAMESPACE_END(kazen)

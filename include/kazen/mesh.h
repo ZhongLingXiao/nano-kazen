@@ -36,6 +36,9 @@ struct Intersection {
     /// with respect to the local coordinate system of the mesh
     Vector3f dndu, dndv;
 
+    /// roughness bias
+    float accumulatedRoughness = 0.f;
+
     /// Create an uninitialized intersection record
     Intersection() : mesh(nullptr) { }
 

@@ -9,6 +9,7 @@ public:
     AreaLight(const PropertyList &propList) {
         m_color = propList.getColor("color", Color3f(1.f));
         m_intensity = propList.getFloat("intensity", 1.f);
+        m_lightPrimaryVisibility = propList.getBoolean("lightPrimaryVisibility", false);
         m_radiance = m_intensity*m_color;
     }
 
@@ -20,7 +21,7 @@ public:
     Color3f sample(LightQueryRecord &lRec, Sampler *sampler, const Mesh *mesh) const override {       
         mesh->sample(sampler, lRec.p, lRec.n);
         lRec.wi = (lRec.p - lRec.ref).normalized();
-        lRec.shadowRay = Ray3f(lRec.ref, lRec.wi, Epsilon, (lRec.p-lRec.ref).norm()-Epsilon);
+        lRec.shadowRay = Ray3f(lRec.ref, lRec.wi, 0.f, (lRec.p-lRec.ref).norm());
         
         /* Calculate geometric term: G(x<->y) = |ny*(y->x)| / ||x-y||^2 
          * |nx*(x->y)| using its data, so it should calculate in integrator
@@ -49,6 +50,9 @@ public:
         return 0.f; // if back-facing surface encountered
     }
 
+    bool getPrimaryVisibility() const override {
+        return m_lightPrimaryVisibility;
+    }
 
     std::string toString() const override {
         return "AreaLight[]";
@@ -58,6 +62,7 @@ private:
     Color3f m_radiance;
     Color3f m_color;
     float m_intensity;
+    bool m_lightPrimaryVisibility;
 };
 
 

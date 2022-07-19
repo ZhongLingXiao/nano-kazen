@@ -23,7 +23,8 @@ public:
 
         /* Return the component-wise absolute
            value of the shading normal as a color */
-        Normal3f n = its.shFrame.n.cwiseAbs();
+        // Normal3f n = its.shFrame.n.cwiseAbs();
+        Normal3f n = its.geoFrame.n.cwiseAbs();
         return Color3f(n.x(), n.y(), n.z());
     }
 
@@ -186,6 +187,9 @@ public:
     PathMisIntegrator(const PropertyList &propList) {
         // system support 512 max bounces
         m_maxDepth = std::min(512, propList.getInteger("maxDepth", 5));
+        m_rayEpsilon = propList.getFloat("traceBias", 0.001f);
+        m_regularization = propList.getBoolean("regularization", false);
+        m_accumulatedRoughness = propList.getFloat("accumulatedRoughness", 0.5f);
     }
 
     Color3f Li(const Scene *scene, Sampler *sampler, const Ray3f &ray_) const {
@@ -198,10 +202,21 @@ public:
         /* MIS weight for intersected lights (set by prev. iteration) */
         float bsdfWeight(1.f);
 
+        /* Rougness bias: //https://twitter.com/YuriyODonnell/status/1199253959086612480 */
+        // float roughnessBias(0.f);
+
         /* First intersection */
         Intersection its;
         if (!scene->rayIntersect(ray, its)) {
             return Li;
+        } 
+        else {
+            if (its.mesh->isLight()) {
+                if (!its.mesh->getLight()->getPrimaryVisibility()) {
+                    Ray3f newRay = Ray3f(its.p + m_rayEpsilon*ray.d, ray.d);
+                    scene->rayIntersect(newRay, its);
+                }
+            }
         }
     
         /* Tracks depth for Russian roulette */
@@ -221,7 +236,7 @@ public:
                getting stuck (e.g. due to total internal reflection) */
             if (depth >= 3) {
                 // continuation probability
-                auto probability = std::min(throughput.maxCoeff()*eta*eta, 0.99f);
+                auto probability = std::min(throughput.maxCoeff()*eta*eta, 0.95f);
                 if (probability <= sampler->next1D()) {
                     break;
                 }
@@ -235,14 +250,40 @@ public:
                 LightQueryRecord lRec(its.p);
                 lRec.uv = its.uv;
                 Color3f Ls = light->sample(lRec, sampler, mesh) / scene->getLightPdf();
-            
                 auto lightPdf = light->pdf(lRec, mesh);
-                if (!scene->rayIntersect(lRec.shadowRay)) {
+            
+                /* Apply trace bias to shadow ray. */
+                lRec.shadowRay.mint = m_rayEpsilon;
+                lRec.shadowRay.maxt -= m_rayEpsilon;
 
+                Intersection shadowIts;
+                bool occluded = false;
+                auto tempRay = lRec.shadowRay;
+                while (true) {
+                    if (scene->rayOccluded(tempRay, shadowIts)) {
+                        if (!shadowIts.mesh->isLight()) {
+                            occluded = true;
+                            break;
+                        } else {
+                            if (shadowIts.mesh->getLight()->getPrimaryVisibility()) {
+                                occluded = true;
+                                break;
+                            }
+                            tempRay = Ray3f(tempRay.o + tempRay.d*(shadowIts.t+m_rayEpsilon), tempRay.d, m_rayEpsilon, tempRay.maxt-shadowIts.t);
+                        }
+                    }
+                    else {
+                        break;
+                    }
+                }
+        
+                // if (!scene->rayOccluded(lRec.shadowRay, shadowIts)) {
+                if (!occluded) {
                     /* Query the BSDF for that emitter-sampled direction */
                     BSDFQueryRecord bRec(its.toLocal(-ray.d), its.toLocal(lRec.wi), ESolidAngle);
                     bRec.its = its;
                     bRec.uv = its.uv;
+
                     Color3f f = its.mesh->getBSDF()->eval(bRec);
 
                     /* Determine density of sampling that same direction using BSDF sampling */
@@ -251,6 +292,12 @@ public:
                     auto lightWeight = powerHeuristic(lightPdf, bsdfPdf);
                     Li += throughput * Ls * f  * lightWeight;
                 }
+            }
+
+            /* Regularize the bsdf to reduce firefly issue */
+            // if (m_regularization && depth >= 1) {
+            if (m_regularization) {
+                its.accumulatedRoughness += its.mesh->getBSDF()->regularize(its.uv) * m_accumulatedRoughness;
             }
 
             /* ----------------------- BSDF sampling ----------------------- */
@@ -263,6 +310,7 @@ public:
 
             /*  Intersect the BSDF ray against the scene geometry */
             ray = Ray3f(its.p, its.toWorld(bRec.wo));
+            ray.mint = m_rayEpsilon;
             auto bsdfPdf = its.mesh->getBSDF()->pdf(bRec);
             if (!scene->rayIntersect(ray, its)) {
                 Li += throughput * scene->getBackgroundColor(ray.d);
@@ -301,6 +349,9 @@ public:
 
 private:
     int m_maxDepth;
+    float m_rayEpsilon;
+    bool m_regularization;
+    float m_accumulatedRoughness;
 };
 
 
