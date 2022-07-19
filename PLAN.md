@@ -46,9 +46,35 @@ Demo场景: https://www.youtube.com/watch?v=95sfHIngAYI : 2022.3.1
 
 - [ ] 积分器
 - [ ] interface design
-- [ ] shader global 中各项属性的计算，比如shading normal，geometry normal
+- [ ] shader global 中各项属性的计算，比如 shading normal，geometry normal
 - [ ] disney bsdf
 - [ ] texture support
 
+---
+
+**《kazen con 2》 memo**
+
+geom:
+- tess geom
+- curves
+
+shading:
+- principle shader
+- volume shader
+- hair shader
+
+integrator:
+- volume (vdb)
 
 
+
+`Zhong`：
+
+- [ ] osl support
+
+`Chen`:
+
+- [ ] closure support 
+- [ ] osl principle shader
+- [ ] volume support
+---
