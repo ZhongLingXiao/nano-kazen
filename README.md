@@ -25,6 +25,8 @@
 **Experimental cpu based path tracer**
 </div>
 
+[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg?style=flat-square)](https://github.com/ZhongLingXiao/nano-kazen/blob/main/LICENSE)
+
 <br>
 
 ## kazen-con 2 : katastrophe
