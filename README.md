@@ -4,13 +4,6 @@
 <!-- inline html -->
 <!-- markdownlint-disable-file MD033 -->
 
-<div align="center">
-
-# 💡 nano-kazen
-
-**Experimental cpu based path tracer**
-</div>
-
 ``` 
   __  ___      ___      ________   _______ .__   __.   
  |  |/  /     /   \    |       /  |   ____||  \ |  | 
@@ -20,12 +13,21 @@
  |__|\__\ /__/     \__\ /________||_______||__| \__| 
 ====================================================================
  nano-kazen: Physically Based Renderer                              
- Version Alpha 0.1.1a                                            
+ Version Alpha 0.1.0                                            
  Copyright (C) 2022 ZhongLingXiao && Joey Chen. All rights reserved.                          
 ====================================================================
 ```
----
-## KAZEN CON 2
+
+<div align="center">
+
+# 💡 nano-kazen
+
+**Experimental cpu based path tracer**
+</div>
+
+<br>
+
+## kazen-con 2 : katastrophe
 
 ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q2/img/kc_v02.png "Figure 1: 1920x1080 | 16384 spp | 1.1 h")
 <div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 1: 1920x1080 | 16384 spp | 1.1 h</center></div><br>
@@ -40,6 +42,8 @@
 3. Fire fly reduction: increase roughness per bounce
 4. Configurable ray bias for reduce ray intersection computations error
 5. Light primary visibility : toggle light visibility
+
+[See the full kazen-2022-q2 report](https://kazen-renderer.github.io/2022/07/kazen-con-v002-report.html)
 
 **Reference**
 
@@ -60,9 +64,9 @@
 [8] [Ray Tracing Denoisinge](https://alain.xyz/blog/ray-tracing-denoising#statistical-analysis) **Alain Galvan**. 2020
 
 
----
+<br>
 
-## KISS PBR shading model
+## kazen-con 1 : kiss pbr shading model
 
 ![](https://github.com/ZhongLingXiao/nano-kazen/blob/main/doc/2022_q1/img/final_cover.jpg "Figure 2: 3840x2160 | 10000 spp | 3.4 h")
 <div align=center><center style="font-size:14px;color:#C0C0C0;text-decoration:underline">Figure 2: 3840x2160 | 10000 spp | 3.4 h</center></div><br>
